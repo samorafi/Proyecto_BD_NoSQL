@@ -1,0 +1,364 @@
+use Gestion_Tareas;
+
+db.createCollection("usuarios");
+db.createCollection("roles");
+db.createCollection("cursos");
+db.createCollection("proyectos");
+db.createCollection("tareas");
+db.createCollection("comentarios");
+db.createCollection("archivos");
+db.createCollection("equipos");
+db.createCollection("notificaciones");
+db.createCollection("logs");
+db.createCollection("etiquetas");
+db.createCollection("estadisticas");
+
+db.usuarios.insertMany([
+    {
+        "_id": "u001",
+        "nombre": "Josue Solano",
+        "correo": "josues@gmail.com",
+        "rol_id": "r001",
+        "activo": true,
+        "carrera": "Ingeniería en Sistemas"
+    },
+    {
+        "_id": "u002",
+        "nombre": "Karla Gomez",
+        "correo": "karlag@gmail.com",
+        "rol_id": "r002",
+        "activo": true,
+        "carrera": "Programación"
+    },
+    {
+        "_id": "u003",
+        "nombre": "Carlos Ramirez",
+        "correo": "carlosr@gmail.com",
+        "rol_id": "r003",
+        "activo": true,
+        "carrera": "Carrera C"
+    },
+    {
+        "_id": "u004",
+        "nombre": "Valeria Jimenez",
+        "correo": "valeriaj@gmail.com",
+        "rol_id": "r001",
+        "activo": true,
+        "carrera": "Carrera D"
+    },
+    {
+        "_id": "u005",
+        "nombre": "Pedro Mendez",
+        "correo": "pedrom@gmail.com",
+        "rol_id": "r002",
+        "activo": true,
+        "carrera": "Ingeniería en Sistemas"
+    }
+]);
+
+db.roles.insertMany([
+    {
+        "_id": "r001",
+        "nombre": "estudiante",
+        "permisos": [
+            "crear_tarea",
+            "comentar",
+			"crear_proyecto"
+        ]
+    },
+    {
+        "_id": "r002",
+        "nombre": "profesor",
+        "permisos": [
+            "crear_proyecto",
+			"crear_tarea",
+            "asignar_tarea",
+			"comentar"
+        ]
+    },
+    {
+        "_id": "r003",
+        "nombre": "administrador",
+        "permisos": [
+            "ver_todo",
+            "modificar_configuracion"
+        ]
+    }
+]);
+
+db.cursos.insertMany([
+    {
+        "_id": "c001",
+        "nombre": "Programación Web",
+        "codigo": "CUR-001",
+        "profesor_id": "u002"
+    },
+    {
+        "_id": "c002",
+        "nombre": "Administración de Bases de Datos",
+        "codigo": "CUR-002",
+        "profesor_id": "u005"
+    },
+    {
+        "_id": "c003",
+        "nombre": "Matemáticas Discretas",
+        "codigo": "CUR-003",
+        "profesor_id": "u002"
+    },
+    {
+        "_id": "c004",
+        "nombre": "Programación Avanzada",
+        "codigo": "CUR-004",
+        "profesor_id": "u005"
+    },
+    {
+        "_id": "c005",
+        "nombre": "Redes",
+        "codigo": "CUR-005",
+        "profesor_id": "u005"
+    }
+]);
+
+db.proyectos.insertMany([
+    {
+        "_id": "p001",
+        "nombre": "Sistema de Gestión de Inventarios",
+        "descripcion": "Desarrollo de una aplicación web para el control de inventario en laboratorios universitarios.",
+        "fecha_creacion": "2025-06-02T00:00:00Z",
+        "id_curso": "c001",
+        "estado": "activo"
+    },
+    {
+        "_id": "p002",
+        "nombre": "Plataforma de Encuestas Académicas",
+        "descripcion": "Creación de una plataforma para aplicar y analizar encuestas dentro del entorno universitario.",
+        "fecha_creacion": "2025-06-01T00:00:00Z",
+        "id_curso": "c004",
+        "estado": "activo"
+    },
+    {
+        "_id": "p003",
+        "nombre": "Sitio Web Institucional Responsivo",
+        "descripcion": "Diseño de un sitio web optimizado para móviles y accesible para todos los usuarios de la universidad.",
+        "fecha_creacion": "2025-06-05T00:00:00Z",
+        "id_curso": "c001",
+        "estado": "activo"
+    },
+    {
+        "_id": "p004",
+        "nombre": "Simulador de Ataques Cibernéticos",
+        "descripcion": "Proyecto práctico para evaluar vulnerabilidades y responder a ciberataques simulados en entornos seguros.",
+        "fecha_creacion": "2025-06-01T00:00:00Z",
+        "id_curso": "c005",
+        "estado": "activo"
+    }
+    
+]);
+
+db.tareas.insertMany([
+    {
+        "_id": "t001",
+        "titulo": "Diseñar modelo entidad-relación",
+        "descripcion": "Crear el modelo ER para el sistema de inventario del laboratorio.",
+        "id_proyecto": "p001", 
+        "responsables": ["u001"], 
+        "fecha_limite": "2025-08-05T00:00:00Z",
+        "prioridad": "alta",
+        "estado": "pendiente",
+        "etiquetas": ["tag001"] 
+    },
+    {
+        "_id": "t002",
+        "titulo": "Diseñar preguntas y lógica de encuesta",
+        "descripcion": "Definir el contenido de la encuesta para recoger la opinión estudiantil.",
+        "id_proyecto": "p002", 
+        "responsables": ["u001"], 
+        "fecha_limite": "2025-07-04T00:00:00Z",
+        "prioridad": "media",
+        "estado": "pendiente",
+        "etiquetas": ["tag002"] 
+    },
+    {
+        "_id": "t003",
+        "titulo": "Maquetar interfaz principal del sitio",
+        "descripcion": "Diseñar la interfaz inicial responsiva para el nuevo portal institucional.",
+        "id_proyecto": "p003", 
+        "responsables": ["u004"], 
+        "fecha_limite": "2025-07-02T00:00:00Z",
+        "prioridad": "alta",
+        "estado": "pendiente",
+        "etiquetas": ["tag003"] 
+    },
+    {
+        "_id": "t004",
+        "titulo": "Configurar entorno seguro para pruebas",
+        "descripcion": "Preparar un entorno de red aislado para simular ataques de ciberseguridad.",
+        "id_proyecto": "p004", 
+        "responsables": ["u004"], 
+        "fecha_limite": "2025-07-11T00:00:00Z",
+        "prioridad": "media",
+        "estado": "pendiente",
+        "etiquetas": ["tag001"] 
+    },
+]);
+
+
+db.comentarios.insertMany([
+    {
+        "_id": "cmt001",
+        "id_tarea": "t001",
+        "autor": "u001",
+        "contenido": "Comentario 1 en la tarea",
+        "fecha": "2025-06-14T00:00:00Z"
+    },
+    {
+        "_id": "cmt002",
+        "id_tarea": "t002",
+        "autor": "u004",
+        "contenido": "Comentario 2 en la tarea",
+        "fecha": "2025-06-12T00:00:00Z"
+    },
+    {
+        "_id": "cmt003",
+        "id_tarea": "t003",
+        "autor": "u001",
+        "contenido": "Comentario 3 en la tarea",
+        "fecha": "2025-06-17T00:00:00Z"
+    },
+    {
+        "_id": "cmt004",
+        "id_tarea": "t004",
+        "autor": "u004",
+        "contenido": "Comentario 4 en la tarea",
+        "fecha": "2025-06-19T00:00:00Z"
+    },
+
+]);
+
+db.archivos.insertMany([
+    {
+        "_id": "ar001",
+        "nombre_archivo": "archivo_1.pdf",
+        "url": " ",
+        "tipo": "pdf",
+        "subido_por": "u001",
+        "id_tarea": "t001",
+        "fecha_subida": "2025-06-14T00:00:00Z"
+    },
+    {
+        "_id": "ar002",
+        "nombre_archivo": "archivo_2.pdf",
+        "url": " ",
+        "tipo": "pdf",
+        "subido_por": "u004",
+        "id_tarea": "t002",
+        "fecha_subida": "2025-06-15T00:00:00Z"
+    },
+]);
+
+db.equipos.insertMany([
+    {
+        "_id": "eq001",
+        "nombre": "Equipo 1",
+        "id_proyecto": "p001",
+        "miembros": [
+            "u001",
+            "u004"
+        ]
+    },
+    {
+        "_id": "eq002",
+        "nombre": "Equipo 2",
+        "id_proyecto": "p002",
+        "miembros": [
+            "u001"
+        ]
+    },
+
+]);
+
+db.notificaciones.insertMany([
+    {
+        "_id": "n001",
+        "usuario_id": "u001",
+        "mensaje": "Notificación 1",
+        "leida": false,
+        "fecha": "2025-06-11T00:00:00Z"
+    },
+    {
+        "_id": "n002",
+        "usuario_id": "u002",
+        "mensaje": "Notificación 2",
+        "leida": false,
+        "fecha": "2025-06-10T00:00:00Z"
+    }
+
+]);
+
+db.logs.insertMany([
+    {
+        "_id": "log001",
+        "accion": "accion_ejemplo",
+        "usuario": "u001",
+        "detalle": "Detalle del log 1",
+        "fecha": "2025-06-04T00:00:00Z"
+    },
+    {
+        "_id": "log002",
+        "accion": "accion_ejemplo",
+        "usuario": "u002",
+        "detalle": "Detalle del log 2",
+        "fecha": "2025-06-07T00:00:00Z"
+    }
+
+]);
+
+db.etiquetas.insertMany([
+    {
+        "_id": "et001",
+        "nombre": "urgente",
+        "color": "#FF0000" // rojo
+    },
+    {
+        "_id": "et002",
+        "nombre": "encuestas",
+        "color": "#007BFF" // azul
+    },
+    {
+        "_id": "et003",
+        "nombre": "diseño",
+        "color": "#28A745" // verde
+    },
+    {
+        "_id": "et004",
+        "nombre": "revisión",
+        "color": "#FFC107" // amarillo
+    },
+    {
+        "_id": "et005",
+        "nombre": "finalizado",
+        "color": "#6C757D" // gris
+    }
+]);
+
+
+db.estadisticas.insertMany([
+    {
+        "_id": "stat001",
+        "usuario_id": "u001",
+        "tareas_creadas": 2,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 2,
+        "archivos_subidos": 1,
+        "ultima_actividad": "2025-06-19T00:00:00Z"
+    },
+    {
+        "_id": "stat002",
+        "usuario_id": "u004",
+        "tareas_creadas": 2,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 2,
+        "archivos_subidos": 1,
+        "ultima_actividad": "2025-06-15T00:00:00Z"
+    },
+]);
