@@ -21,11 +21,11 @@ mongoose.connect(process.env.MONGO_URI, {
 .catch(err => console.error('❌ Error de conexión:', err));
 
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'view')));
 
 //Mostrar index.html
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'view', 'index.html'));
 });
 
 // Iniciar servidor
