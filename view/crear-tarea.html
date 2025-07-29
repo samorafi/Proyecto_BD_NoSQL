@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Crear Tarea</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light">
+ 
+<div class="container mt-5">
+<h2 class="mb-4">Crear nueva tarea</h2>
+ 
+  <form id="formTarea">
+<div class="mb-3">
+<label for="titulo" class="form-label">Título</label>
+<input type="text" class="form-control" id="titulo" required />
+</div>
+ 
+    <div class="mb-3">
+<label for="descripcion" class="form-label">Descripción</label>
+<textarea class="form-control" id="descripcion" rows="3"></textarea>
+</div>
+ 
+    <div class="mb-3">
+<label for="responsables" class="form-label">Responsables</label>
+<select multiple class="form-select" id="responsables"></select>
+</div>
+ 
+    <div class="mb-3">
+<label for="fecha_limite" class="form-label">Fecha Límite</label>
+<input type="date" class="form-control" id="fecha_limite" />
+</div>
+ 
+    <div class="mb-3">
+<label for="prioridad" class="form-label">Prioridad</label>
+<select class="form-select" id="prioridad">
+<option value="alta">Alta</option>
+<option value="media" selected>Media</option>
+<option value="baja">Baja</option>
+</select>
+</div>
+ 
+    <div class="mb-3">
+<label for="etiquetas" class="form-label">Etiquetas</label>
+<select multiple class="form-select" id="etiquetas"></select>
+</div>
+ 
+    <!-- Aquí puedes dejar fijo el id_proyecto (puede venir por session en el futuro) -->
+<input type="hidden" id="id_proyecto" value="p001" />
+ 
+    <button type="submit" class="btn btn-primary">Crear Tarea</button>
+</form>
+ 
+  <div id="mensaje" class="mt-3"></div>
+</div>
+ 
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+$(document).ready(function () {
+  // Cargar usuarios
+  $.get("/api/tareas/extras/usuarios", function (data) {
+    data.usuarios.forEach(function (usuario) {
+      $("#responsables").append(`<option value="${usuario._id}">${usuario.nombre}</option>`);
+    });
+  });
+ 
+  // Cargar etiquetas
+  $.get("/api/tareas/extras/etiquetas", function (data) {
+    data.etiquetas.forEach(function (etiqueta) {
+      $("#etiquetas").append(`<option value="${etiqueta._id}">${etiqueta.nombre}</option>`);
+    });
+  });
+ 
+  // Enviar formulario
+  $("#formTarea").on("submit", function (e) {
+    e.preventDefault();
+ 
+    const nuevaTarea = {
+      titulo: $("#titulo").val(),
+      descripcion: $("#descripcion").val(),
+      id_proyecto: $("#id_proyecto").val(),
+      responsables: $("#responsables").val(),
+      fecha_limite: $("#fecha_limite").val(),
+      prioridad: $("#prioridad").val(),
+      etiquetas: $("#etiquetas").val()
+    };
+ 
+    $.ajax({
+      url: "/api/tareas",
+      method: "POST",
+      contentType: "application/json",
+      data: JSON.stringify(nuevaTarea),
+      success: function (res) {
+        $("#mensaje").html(`<div class="alert alert-success">${res.mensaje}</div>`);
+        $("#formTarea")[0].reset();
+      },
+      error: function () {
+        $("#mensaje").html(`<div class="alert alert-danger">Error al crear la tarea</div>`);
+      }
+    });
+  });
+});
+</script>
+</body>
+</html>

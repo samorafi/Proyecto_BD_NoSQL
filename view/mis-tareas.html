@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mis Tareas</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body class="bg-light">
+
+<!-- Modal de edición -->
+<div class="modal fade" id="modalEditarTarea" tabindex="-1" aria-labelledby="modalEditarTareaLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="formEditarTarea">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalEditarTareaLabel">Editar Tarea</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editarTareaId" />
+
+          <div class="mb-3">
+            <label class="form-label">Título</label>
+            <input type="text" class="form-control" id="editarTitulo" required />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Descripción</label>
+            <textarea class="form-control" id="editarDescripcion"></textarea>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Fecha límite</label>
+            <input type="date" class="form-control" id="editarFechaLimite" />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Prioridad</label>
+            <select class="form-select" id="editarPrioridad">
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Etiquetas</label>
+            <select multiple class="form-select" id="editarEtiquetas"></select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-5">
+  <h2 class="mb-4">Mis Tareas</h2>
+  <table class="table table-bordered table-striped">
+    <thead>
+      <tr>
+        <th>Título</th>
+        <th>Prioridad</th>
+        <th>Estado</th>
+        <th>Fecha límite</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tablaTareas"></tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+<script>
+$(document).ready(function () {
+  const idUsuario = "u001";
+
+  function cargarTareas() {
+    $.get(`/api/tareas/usuario/${idUsuario}`, function (data) {
+      const tbody = $("#tablaTareas");
+      tbody.empty();
+
+      if (data.tareas.length === 0) {
+        tbody.append(`<tr><td colspan="5" class="text-center">No tienes tareas asignadas.</td></tr>`);
+        return;
+      }
+
+      data.tareas.forEach(function (tarea) {
+        tbody.append(`
+<tr>
+  <td>${tarea.titulo}</td>
+  <td>${tarea.prioridad}</td>
+  <td>
+    <select class="form-select estado-tarea" data-id="${tarea._id}">
+      <option value="pendiente" ${tarea.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
+      <option value="en_proceso" ${tarea.estado === 'en_proceso' ? 'selected' : ''}>En Proceso</option>
+      <option value="finalizada" ${tarea.estado === 'finalizada' ? 'selected' : ''}>Finalizada</option>
+    </select>
+  </td>
+  <td>${tarea.fecha_limite ? new Date(tarea.fecha_limite).toLocaleDateString() : ''}</td>
+  <td>
+    <a href="/detalle-tarea.html?id=${tarea._id}" class="btn btn-sm btn-outline-primary me-2">Ver</a>
+    <button class="btn btn-sm btn-outline-warning btn-editar" data-id="${tarea._id}">Editar</button>
+    <button class="btn btn-sm btn-outline-danger btn-eliminar" data-id="${tarea._id}">Eliminar</button>
+  </td>
+</tr>
+        `);
+      });
+    });
+  }
+
+  cargarTareas();
+
+  $.get("/api/tareas/extras/etiquetas", function (res) {
+    res.etiquetas.forEach(e => {
+      $("#editarEtiquetas").append(`<option value="${e._id}">${e.nombre}</option>`);
+    });
+  });
+
+  $(document).on('change', '.estado-tarea', function () {
+    const tareaId = $(this).data('id');
+    const nuevoEstado = $(this).val();
+
+    $.ajax({
+      url: `/api/tareas/${tareaId}/estado`,
+      method: "PATCH",
+      contentType: "application/json",
+      data: JSON.stringify({ nuevoEstado }),
+      success: function () {
+        console.log(`Estado actualizado para tarea ${tareaId}`);
+      },
+      error: function () {
+        alert('Error al actualizar el estado');
+      }
+    });
+  });
+
+  $(document).on("click", ".btn-eliminar", function () {
+    const idTarea = $(this).data("id");
+    if (confirm("¿Estás seguro de que deseas eliminar esta tarea?")) {
+      $.ajax({
+        url: `/api/tareas/${idTarea}`,
+        method: "DELETE",
+        success: function () {
+          alert("Tarea eliminada correctamente");
+          cargarTareas();
+        },
+        error: function () {
+          alert("Error al eliminar la tarea");
+        },
+      });
+    }
+  });
+});
+</script>
+</body>
+</html>
+
+ 

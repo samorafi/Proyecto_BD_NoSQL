@@ -17,6 +17,13 @@ header {
   text-align: center;
 }
 
+.tituloNav{
+  text-decoration: none;
+  color: white;
+  font-size: 40px;
+  font-weight: bold;
+}
+
 nav {
   background-color: #f0f0f0;
   padding: 1rem;
@@ -54,4 +61,8 @@ footer {
   position: fixed;
   bottom: 0;
   width: 100%;
+}
+
+.selectedNav{
+  background: #007BFF;
 }
