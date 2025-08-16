@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Mi Perfil | Gestor Académico</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    header { background:#2a73ff; color:white; }
+    .profile-card { max-width: 720px; }
+  </style>
+</head>
+<body class="bg-light">
+
+<header class="d-flex justify-content-between align-items-center p-3">
+  <h1 class="m-0">
+    <a href="#" id="homeLink" class="tituloNav" style="color:white; text-decoration:none;">Gestor Académico</a>
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+
+<nav>
+  <ul class="menu">
+    <li><a href="/perfil.html" class="selectedNav">Perfil</a></li>
+    <li><a href="#">Gestión Académica</a></li>
+    <li><a href="menu-tareas.html">Tareas y Colaboración</a></li>
+    <li><a href="#">Estadísticas</a></li>
+    <li><a href="#">Logs</a></li>
+  </ul>
+</nav>
+
+<main class="container my-5">
+  <section class="mx-auto profile-card">
+    <h2 class="mb-3">Mi perfil</h2>
+
+    <div class="card p-4 shadow-sm">
+      <form id="perfilForm" class="row g-3">
+        <div class="col-12">
+          <label class="form-label">Correo (no editable)</label>
+          <input id="correo" class="form-control" type="email" readonly/>
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label">Nombre</label>
+          <input id="nombre" class="form-control" required/>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Rol</label>
+          <input id="rolNombre" class="form-control" readonly/>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Carrera</label>
+          <input id="carrera" class="form-control"/>
+        </div>
+
+        <hr class="my-3"/>
+
+        <div class="col-12">
+          <h5 class="mb-1">Cambiar contraseña</h5>
+          <div class="form-text">Deja estos campos vacíos si no quieres cambiarla.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Contraseña actual</label>
+          <input id="currentPassword" class="form-control" type="password" autocomplete="current-password"/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Nueva contraseña</label>
+          <input id="newPassword" class="form-control" type="password" autocomplete="new-password"/>
+        </div>
+
+        <div class="col-12">
+          <button class="btn btn-primary" type="submit">Guardar cambios</button>
+          <span id="msg" class="ms-3 small"></span>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer class="text-center py-4">
+  <p>&copy; 2025 Portal Académico | Proyecto con MongoDB y Node.js</p>
+</footer>
+
+<script>
+  function cap(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  (async function init(){
+    try {
+      const me = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!me.ok) return window.location.href = '/login.html';
+      const { user } = await me.json();
+      const rol = user?.rolNombre || 'estudiante';
+
+      const home =
+        rol === 'profesor' ? '/index-profesor.html' :
+        rol === 'administrador' ? '/index-admin.html' :
+        '/index-estudiante.html';
+
+      const homeLink = document.getElementById('homeLink');
+      if (homeLink) homeLink.href = home;
+
+      const info = document.getElementById('userInfo');
+      if (info) { info.textContent = `${user.nombre} · ${cap(rol)}`; info.style.display = 'inline-flex'; }
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.style.display = 'inline-block';
+        logoutBtn.addEventListener('click', async () => {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+          window.location.href = '/login.html';
+        });
+      }
+
+      const res = await fetch('/api/users/me', { credentials: 'include' });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '');
+        console.error('GET /api/users/me fallo:', res.status, txt);
+        return alert('No se pudo cargar el perfil');
+      }
+
+      const perfil = await res.json();
+
+      document.getElementById('correo').value = perfil.correo || '';
+      document.getElementById('nombre').value = perfil.nombre || '';
+      document.getElementById('carrera').value = perfil.carrera || '';
+      document.getElementById('rolNombre').value = cap(perfil.rolNombre || '');
+    } catch (e) {
+      console.error(e);
+      window.location.href = '/login.html';
+    }
+  })();
+
+  document.getElementById('perfilForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('msg');
+    msg.textContent = '';
+    msg.className = 'ms-3 small';
+
+    const payload = {
+      nombre: document.getElementById('nombre').value.trim(),
+      carrera: document.getElementById('carrera').value.trim(),
+      currentPassword: document.getElementById('currentPassword').value,
+      newPassword: document.getElementById('newPassword').value
+    };
+
+    if (!payload.newPassword) {
+      delete payload.currentPassword;
+      delete payload.newPassword;
+    }
+
+    try {
+      const res = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        msg.textContent = json.error || 'Error actualizando perfil';
+        msg.classList.add('text-danger');
+        return;
+      }
+
+      msg.textContent = 'Cambios guardados';
+      msg.classList.add('text-success');
+
+      document.getElementById('currentPassword').value = '';
+      document.getElementById('newPassword').value = '';
+    } catch (err) {
+      msg.textContent = 'Error de red: ' + err.message;
+      msg.classList.add('text-danger');
+    }
+  });
+</script>
+<script src="/js/auth-ui.js"></script>
+<script>
+  AuthUI.initHeader({ protect: true });
+</script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Estudiante | Gestor Académico</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff; color:white;">
+  <h1 class="m-0">
+    <a href="#" id="homeLink" class="tituloNav" style="color:white; text-decoration:none;">Gestor Académico</a>
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+<nav>
+  <ul class="menu">
+    <li><a href="/perfil.html">Perfil</a></li>
+    <li><a href="#">Gestión Académica</a></li>
+    <li><a href="menu-tareas.html">Tareas y Colaboración</a></li>
+    <li><a href="#">Estadísticas</a></li>
+    <li><a href="#">Logs</a></li>
+  </ul>
+</nav>
+<main class="container mt-4">
+  <section id="contenido">
+    <h2>Panel de Estudiante</h2>
+    <p>Accede a tus cursos, proyectos y tareas asignadas.</p>
+  </section>
+</main>
+<footer><p>&copy; 2025 Portal Académico</p></footer>
+<script>
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = '/login.html';
+  });
+
+  function cap(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+
+  (async () => {
+    try {
+      const res = await fetch('/api/auth/me');
+      if (!res.ok) { window.location.href = '/login.html'; return; }
+      const { user } = await res.json();
+
+      const rol = user?.rolNombre || 'estudiante';
+      const home =
+        rol === 'profesor' ? '/index-profesor.html' :
+        rol === 'administrador' ? '/index-admin.html' :
+        '/index-estudiante.html';
+
+      const homeLink = document.getElementById('homeLink');
+      if (homeLink) homeLink.href = home;
+
+      const info = document.getElementById('userInfo');
+      if (info) {
+        info.textContent = `${user.nombre} · ${cap(rol)}`;
+        info.style.display = 'inline-flex';
+      }
+
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.style.display = 'inline-block';
+        logoutBtn.addEventListener('click', async () => {
+          await fetch('/api/auth/logout', { method: 'POST' });
+          window.location.href = '/login.html';
+        });
+      }
+    } catch (e) {
+      window.location.href = '/login.html';
+    }
+  })();
+</script>
+<script src="/js/auth-ui.js"></script>
+<script>
+  AuthUI.initHeader({ protect: true });
+</script>
+</body>
+</html>

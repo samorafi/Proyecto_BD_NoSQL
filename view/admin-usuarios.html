@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Gestión de Usuarios | Gestor Académico</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    header { background:#2a73ff; color:white; }
+    .table-actions { white-space: nowrap; }
+    .role-badge { text-transform: capitalize; }
+  </style>
+</head>
+<body class="bg-light">
+
+<header class="d-flex justify-content-between align-items-center p-3">
+  <h1 class="m-0">
+    <a href="#" id="homeLink" class="tituloNav" style="color:white; text-decoration:none;">Gestor Académico</a>
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+
+<nav>
+  <ul class="menu">
+    <li><a href="/perfil.html">Perfil</a></li>
+    <li><a href="#">Gestión Académica</a></li>
+    <li><a href="menu-tareas.html">Tareas y Colaboración</a></li>
+    <li><a href="#">Estadísticas</a></li>
+    <li><a href="#">Logs</a></li>
+    <li><a href="/admin-usuarios.html" class="selectedNav">Gestión de Usuarios</a></li>
+  </ul>
+</nav>
+
+<main class="container my-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="text-primary m-0">Gestión de Usuarios</h2>
+    <div class="d-flex gap-2">
+      <input id="searchInput" class="form-control form-control-sm" placeholder="Buscar por nombre/correo/carrera"/>
+      <button id="refreshBtn" class="btn btn-outline-primary btn-sm">Refrescar</button>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th>Carrera</th>
+            <th>Activo</th>
+            <th class="text-center">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody">
+          <tr><td colspan="7" class="text-center text-muted py-4">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar usuario</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit_id"/>
+        <div class="mb-2">
+          <label class="form-label">Nombre</label>
+          <input id="edit_nombre" class="form-control" required/>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Correo</label>
+          <input id="edit_correo" class="form-control" type="email" required/>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Carrera</label>
+          <input id="edit_carrera" class="form-control"/>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Rol</label>
+          <select id="edit_rol_id" class="form-select" required></select>
+        </div>
+        <div class="form-check form-switch mb-2">
+          <input class="form-check-input" type="checkbox" id="edit_activo">
+          <label class="form-check-label" for="edit_activo">Activo</label>
+        </div>
+        <hr/>
+        <div class="mb-2">
+          <label class="form-label">Nueva contraseña (opcional)</label>
+          <input id="edit_password" class="form-control" type="password" placeholder="Deja vacío para no cambiarla"/>
+        </div>
+        <div id="edit_msg" class="small mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-primary" type="submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function cap(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+  let ROLES = [];
+  let USERS = [];
+
+  (async function initHeader(){
+    const me = await fetch('/api/auth/me', { credentials: 'include' });
+    if (!me.ok) return window.location.href = '/login.html';
+    const { user } = await me.json();
+    if (user?.rolNombre !== 'administrador') return window.location.href = '/dashboard';
+
+    const home = '/index-admin.html';
+    const homeLink = document.getElementById('homeLink');
+    if (homeLink) homeLink.href = home;
+
+    const info = document.getElementById('userInfo');
+    if (info) { info.textContent = `${user.nombre} · ${cap(user.rolNombre)}`; info.style.display='inline-flex'; }
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+      logoutBtn.style.display = 'inline-block';
+      logoutBtn.onclick = async () => {
+        await fetch('/api/auth/logout', { method:'POST', credentials:'include' });
+        window.location.href = '/login.html';
+      };
+    }
+  })();
+
+  async function loadRoles(){
+    const res = await fetch('/api/admin/roles', { credentials:'include' });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      console.error('GET /api/admin/roles fallo:', res.status, txt);
+      throw new Error('No se pudieron cargar roles');
+    }
+    const { roles } = await res.json();
+    ROLES = roles || [];
+  }
+
+  function roleNameById(id){
+    const r = ROLES.find(x => x._id === id);
+    return r ? r.nombre : id || '';
+  }
+
+  async function loadUsers(q=''){
+    const url = q.trim() ? `/api/admin/users?q=${encodeURIComponent(q.trim())}` : '/api/admin/users';
+    const res = await fetch(url, { credentials:'include' });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      console.error('GET /api/admin/users fallo:', res.status, txt);
+      throw new Error('No se pudieron cargar usuarios');
+    }
+    const { users } = await res.json();
+    USERS = users || [];
+    renderUsers(USERS);
+  }
+
+  function renderUsers(data){
+    const tbody = document.getElementById('usersBody');
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted py-4">Sin resultados</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = data.map(u => `
+      <tr data-id="${u._id}">
+        <td class="text-muted">${u._id}</td>
+        <td>${u.nombre || ''}</td>
+        <td>${u.correo || ''}</td>
+        <td><span class="badge bg-secondary role-badge">${cap(roleNameById(u.rol_id))}</span></td>
+        <td>${u.carrera || ''}</td>
+        <td>${u.activo ? 'Sí' : 'No'}</td>
+        <td class="text-center table-actions">
+          <button class="btn btn-sm btn-outline-primary me-1" data-action="edit">Editar</button>
+          <button class="btn btn-sm btn-outline-danger" data-action="delete">Eliminar</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('usersBody').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    const tr = e.target.closest('tr');
+    const id = tr?.getAttribute('data-id');
+    if (!id) return;
+
+    if (btn.dataset.action === 'edit') {
+      openEditModal(id);
+    } else if (btn.dataset.action === 'delete') {
+      if (!confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.')) return;
+      const res = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {
+        method:'DELETE', credentials:'include'
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(()=> '');
+        console.error('DELETE usuario fallo:', res.status, txt);
+        return alert('No se pudo eliminar el usuario');
+      }
+      await loadUsers(document.getElementById('searchInput').value);
+    }
+  });
+
+  let editModal;
+  async function openEditModal(id){
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, { credentials:'include' });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=> '');
+      console.error('GET usuario fallo:', res.status, txt);
+      return alert('No se pudo abrir el editor');
+    }
+    const { user } = await res.json();
+
+    const sel = document.getElementById('edit_rol_id');
+    sel.innerHTML = ROLES.map(r => `<option value="${r._id}">${cap(r.nombre)}</option>`).join('');
+    document.getElementById('edit_id').value = user._id;
+    document.getElementById('edit_nombre').value = user.nombre || '';
+    document.getElementById('edit_correo').value = user.correo || '';
+    document.getElementById('edit_carrera').value = user.carrera || '';
+    document.getElementById('edit_rol_id').value = user.rol_id || '';
+    document.getElementById('edit_activo').checked = !!user.activo;
+    document.getElementById('edit_password').value = '';
+    const msg = document.getElementById('edit_msg'); msg.textContent=''; msg.className='small mt-2';
+
+    editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    editModal.show();
+  }
+
+  document.getElementById('editForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('edit_msg');
+    msg.textContent=''; msg.className='small mt-2';
+
+    const id = document.getElementById('edit_id').value;
+    const payload = {
+      nombre: document.getElementById('edit_nombre').value.trim(),
+      correo: document.getElementById('edit_correo').value.trim().toLowerCase(),
+      carrera: document.getElementById('edit_carrera').value.trim(),
+      rol_id: document.getElementById('edit_rol_id').value,
+      activo: document.getElementById('edit_activo').checked,
+    };
+    const pwd = document.getElementById('edit_password').value;
+    if (pwd && pwd.trim()) payload.password = pwd.trim();
+
+    const res = await fetch(`/api/admin/users/${encodeURIComponent(id)}`, {
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json().catch(()=> ({}));
+    if (!res.ok) {
+      msg.textContent = json.error || 'Error guardando cambios';
+      msg.classList.add('text-danger');
+      return;
+    }
+    msg.textContent = 'Guardado';
+    msg.classList.add('text-success');
+
+    setTimeout(async () => {
+      editModal.hide();
+      await loadUsers(document.getElementById('searchInput').value);
+    }, 400);
+  });
+
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    const filtered = USERS.filter(u =>
+      (u.nombre || '').toLowerCase().includes(q) ||
+      (u.correo || '').toLowerCase().includes(q) ||
+      (u.carrera || '').toLowerCase().includes(q) ||
+      (u.rol_id || '').toLowerCase().includes(q)
+    );
+    renderUsers(filtered);
+  });
+  document.getElementById('refreshBtn').onclick = async () => {
+    await loadUsers(document.getElementById('searchInput').value);
+  };
+
+  (async function init(){
+    try {
+      await loadRoles();
+      await loadUsers();
+    } catch (e) {
+      console.error(e);
+      alert('No se pudo cargar la gestión de usuarios');
+    }
+  })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  AuthUI.initHeader({ protect: true });
+</script>
+</body>
+</html>

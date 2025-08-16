@@ -362,3 +362,13 @@ db.estadisticas.insertMany([
         "ultima_actividad": "2025-06-15T00:00:00Z"
     },
 ]);
+
+//Ejecutar los siguientes bloques para implementar Registro y Login
+
+db.usuarios.updateMany(
+  {},
+  { $set: { password: "abc123" } }
+)
+
+db.usuarios.createIndex({ correo: 1 }, { unique: true });
+
