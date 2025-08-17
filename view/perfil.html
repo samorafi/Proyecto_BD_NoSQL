@@ -30,7 +30,7 @@
     <li><a href="menu-tareas.html">Tareas y Colaboración</a></li>
     <li><a href="#">Estadísticas</a></li>
     <li><a href="#">Logs</a></li>
-    <li class="role-only" data-roles="administrador" style="display:none;"><a href="/admin-usuarios.html">Gestión de Usuarios</a>
+    <li class="role-only" data-roles="administrador" style="display:none;"><a href="/admin-usuarios.html">Gestión de Usuarios</a></li>
   </ul>
 </nav>
 
@@ -41,7 +41,7 @@
     <div class="card p-4 shadow-sm">
       <form id="perfilForm" class="row g-3">
         <div class="col-12">
-          <label class="form-label">Correo (no editable)</label>
+          <label class="form-label">Correo</label>
           <input id="correo" class="form-control" type="email" readonly/>
         </div>
 
@@ -57,7 +57,8 @@
 
         <div class="col-12">
           <label class="form-label">Carrera</label>
-          <input id="carrera" class="form-control"/>
+          <input id="carrera" class="form-control" readonly tabindex="-1"/>
+          <div class="form-text">Para cambiar de carrera, contacta a un administrador.</div>
         </div>
 
         <hr class="my-3"/>
@@ -97,7 +98,7 @@
       const me = await fetch('/api/auth/me', { credentials: 'include' });
       if (!me.ok) return window.location.href = '/login.html';
       const { user } = await me.json();
-      const rol = user?.rolNombre || 'estudiante';
+      const rol = (user?.rolNombre || 'estudiante').toLowerCase();
 
       const home =
         rol === 'profesor' ? '/index-profesor.html' :
@@ -120,7 +121,6 @@
       }
 
       const res = await fetch('/api/users/me', { credentials: 'include' });
-
       if (!res.ok) {
         const txt = await res.text().catch(() => '');
         console.error('GET /api/users/me fallo:', res.status, txt);
@@ -129,10 +129,13 @@
 
       const perfil = await res.json();
 
-      document.getElementById('correo').value = perfil.correo || '';
-      document.getElementById('nombre').value = perfil.nombre || '';
-      document.getElementById('carrera').value = perfil.carrera || '';
-      document.getElementById('rolNombre').value = cap(perfil.rolNombre || '');
+      document.getElementById('correo').value   = perfil.correo || '';
+      document.getElementById('nombre').value   = perfil.nombre || '';
+      document.getElementById('carrera').value  = perfil.carrera || '';
+      document.getElementById('rolNombre').value= cap(perfil.rolNombre || '');
+
+      // asegurar no editable por JS también
+      document.getElementById('carrera').readOnly = true;
     } catch (e) {
       console.error(e);
       window.location.href = '/login.html';
@@ -145,9 +148,9 @@
     msg.textContent = '';
     msg.className = 'ms-3 small';
 
+    // ⬇️ NO enviamos "carrera"
     const payload = {
       nombre: document.getElementById('nombre').value.trim(),
-      carrera: document.getElementById('carrera').value.trim(),
       currentPassword: document.getElementById('currentPassword').value,
       newPassword: document.getElementById('newPassword').value
     };
@@ -183,6 +186,7 @@
     }
   });
 </script>
+
 <script src="/js/auth-ui.js"></script>
 <script>
   AuthUI.initHeader({ protect: true });
