@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Crear curso</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-light">
+
+<header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff;color:white;">
+  <h1 class="m-0">
+    <a id="homeLink" href="#" class="tituloNav" style="color:white;text-decoration:none;">Gestor Académico</a>
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+
+<nav id="mainNav">
+  <ul class="menu">
+    <li><a href="/perfil.html">Perfil</a></li>
+    <li><a href="/gestion-academica.html">Gestión Académica</a></li>
+    <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
+    <li><a href="#">Estadísticas</a></li>
+    <li><a href="#">Logs</a></li>
+  </ul>
+</nav>
+
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="text-primary m-0">Crear curso</h2>
+    <a href="/cursos.html" class="btn btn-outline-secondary btn-sm">← Volver</a>
+  </div>
+
+  <div id="alertBox" class="alert d-none" role="alert"></div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form id="cursoForm" class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Carrera</label>
+          <input id="inpCarrera" class="form-control" placeholder="Ingeniería en Sistemas" required/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Código</label>
+          <input id="inpCodigo" class="form-control" placeholder="CUR-001" required/>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Curso (nombre)</label>
+          <input id="inpNombre" class="form-control" placeholder="Programación Web" required/>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Profesor</label>
+          <select id="selProfesor" class="form-select" required>
+            <option value="">Seleccione…</option>
+          </select>
+          <div class="form-text">Se cargan los usuarios con rol Profesor.</div>
+        </div>
+        <div class="col-12 mt-2">
+          <button class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<script>
+  function cap(s){return s? s.charAt(0).toUpperCase()+s.slice(1):'';}
+  function showAlert(msg,type='danger'){
+    const box=document.getElementById('alertBox');
+    box.textContent=msg||'Ocurrió un error';
+    box.className='alert alert-'+type;
+  }
+  function hideAlert(){document.getElementById('alertBox').className='alert d-none';}
+
+  async function getMe(){
+    const r=await fetch('/api/auth/me'); if(!r.ok) throw new Error('No autenticado'); return r.json();
+  }
+  async function loadProfesores(){
+    // intenta /api/users?rol=profesor; si falla, prueba /api/admin/users?rol=profesor
+    let r=await fetch('/api/users?rol=profesor').catch(()=>null);
+    if(!r || !r.ok){ r=await fetch('/api/admin?rol=profesor').catch(()=>null); }
+    let data=[];
+    if(r && r.ok){ data=await r.json(); }
+    const list = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+    const sel=document.getElementById('selProfesor');
+    sel.innerHTML = '<option value="">Seleccione…</option>' + (list||[]).map(u=>(
+      `<option value="${u._id}">${u.nombre || u.correo || u._id}</option>`
+    )).join('');
+  }
+  async function createCurso(payload){
+    const r=await fetch('/api/cursos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error(await r.text());
+    return r.json();
+  }
+
+  (async()=>{
+    try{
+      const me=await getMe();
+      const user=me.user||{};
+      const rol=(user.rolNombre||'').toLowerCase();
+      // Sólo admin
+      if(rol!=='administrador'){ window.location.href='/dashboard'; return; }
+
+      // header
+      const home = '/index-admin.html';
+      document.getElementById('homeLink').href=home;
+      const info=document.getElementById('userInfo'); info.textContent=`${user.nombre} · ${cap(rol)}`; info.style.display='inline-flex';
+      const logout=document.getElementById('logoutBtn'); logout.style.display='inline-block';
+      logout.onclick=async()=>{ try{await fetch('/api/auth/logout',{method:'POST'});}catch{} window.location.href='/login.html'; };
+
+      // profesores
+      await loadProfesores();
+
+      // submit
+      document.getElementById('cursoForm').addEventListener('submit', async (e)=>{
+        e.preventDefault(); hideAlert();
+        const payload={
+          carrera: (document.getElementById('inpCarrera').value||'').trim(),
+          codigo:  (document.getElementById('inpCodigo').value||'').trim(),
+          nombre:  (document.getElementById('inpNombre').value||'').trim(),
+          profesor_id: document.getElementById('selProfesor').value
+        };
+        if(!payload.carrera || !payload.codigo || !payload.nombre || !payload.profesor_id){
+          showAlert('Complete todos los campos obligatorios'); return;
+        }
+        try{
+          await createCurso(payload);
+          showAlert('Curso creado correctamente','success');
+          setTimeout(()=>location.href='/cursos.html',800);
+        }catch(err){
+          showAlert('No se pudo crear el curso. '+(err.message||err));
+        }
+      });
+
+    }catch(e){
+      window.location.href='/login.html';
+    }
+  })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

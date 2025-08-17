@@ -15,6 +15,7 @@ router.use((req, res, next) => auth(true)(req, res, next));
 router.get('/_ping', (req, res) => res.json({ ok: true }));
 
 // Rutas reales
+router.get('/por-carrera', cursosCtrl.buscarPorCarreraNombre);
 router.get('/listado-por-rol', cursosCtrl.listadoPorRol);
 router.get('/',                cursosCtrl.getAll);
 router.get('/:id',             cursosCtrl.getById);

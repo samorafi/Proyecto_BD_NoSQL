@@ -1,8 +1,14 @@
 // controllers/cursos.controller.js
-const Curso = require('../models/curso.model');
-const Usuario = require('../models/usuario.model'); // para obtener nombres de profesor
+// Reglas:
+// - admin: ve todos (puede crear/editar/eliminar)
+// - profesor: solo cursos donde profesor_id === su _id
+// - estudiante: solo cursos donde curso.carrera == usuario.carrera (por NOMBRE; case/acentos-insensible)
+//   Si la carrera no viene en req.user, se obtiene desde la BD.
 
-// Helpers
+const Curso = require('../models/curso.model');
+const Usuario = require('../models/usuario.model');
+
+// ===== Helpers =====
 function isAdmin(req) {
   return (req.user?.rolNombre || '').toLowerCase() === 'administrador';
 }
@@ -10,7 +16,7 @@ function getRol(req) {
   return (req.user?.rolNombre || 'estudiante').toLowerCase();
 }
 
-// Devuelve un diccionario { idUsuario: nombre }
+// Mapa { userId: nombre } para mostrar profesor por nombre
 async function buildProfesorNameMap(cursos) {
   const ids = [...new Set((cursos || []).map(c => c.profesor_id).filter(Boolean))];
   if (!ids.length) return {};
@@ -20,32 +26,59 @@ async function buildProfesorNameMap(cursos) {
   return map;
 }
 
+// Normaliza el curso para la UI
 function normalizeCurso(c, nameById) {
   return {
     id: String(c._id),
-    codigo: c.codigo || '',
+    carrera: c.carrera || '—',          // string en el documento del curso
     nombre: c.nombre || '',
+    codigo: c.codigo || '',
     profesor: nameById?.[String(c.profesor_id)] || String(c.profesor_id || '—'),
   };
 }
 
 // =====================
-// Listado por rol
+// Listado por rol (para la vista)
 // =====================
 exports.listadoPorRol = async (req, res) => {
   try {
-    const rol = getRol(req);
-    const userId = req.user?._id;
-
+    const rol = (req.user?.rolNombre || 'estudiante').toLowerCase();
+    const user = req.user || {};
     let filter = {};
+    let useCollation = false;
+
     if (rol === 'profesor') {
-      filter = { profesor_id: userId };
+      const uid = user._id || user.id || user.uid;
+      filter = { profesor_id: uid };
+    } else if (rol === 'estudiante') {
+      // 1) carrera desde token o query
+      let carreraUser = (user.carrera || req.query.carrera || '').trim();
+
+      // 2) si no vino, intenta leer de la BD por _id o por correo
+      if (!carreraUser) {
+        const uid = user._id || user.id || user.uid;
+        const correo = user.correo || user.email;
+        let u = null;
+        if (uid) u = await Usuario.findOne({ _id: uid }, { carrera: 1 }).lean();
+        if (!u && correo) u = await Usuario.findOne({ correo }, { carrera: 1 }).lean();
+        carreraUser = (u?.carrera || '').trim();
+      }
+
+      if (carreraUser) {
+        // Igualdad por NOMBRE con collation español (ignora tildes/mayúsculas)
+        filter = { carrera: carreraUser };
+        useCollation = true;
+      } else {
+        // Evita mostrar todo por error
+        filter = { _id: { $exists: false } };
+      }
     }
-    // estudiante: sin filtro (ve todos). admin: sin filtro (ve todos)
 
-    const cursos = await Curso.find(filter).lean();
+    let q = Curso.find(filter);
+    if (useCollation) q = q.collation({ locale: 'es', strength: 1 });
+    const cursos = await q.lean();
+
     const nameById = await buildProfesorNameMap(cursos);
-
     res.json({
       role: rol,
       canEdit: rol === 'administrador',
@@ -59,7 +92,7 @@ exports.listadoPorRol = async (req, res) => {
 };
 
 // =====================
-// CRUD básico (sin carrera)
+// CRUD (admin)
 // =====================
 exports.getAll = async (_req, res) => {
   try {
@@ -88,12 +121,13 @@ exports.create = async (req, res) => {
   try {
     if (!isAdmin(req)) return res.status(403).json({ message: 'No autorizado' });
 
-    const { _id, codigo, nombre, profesor_id } = req.body;
+    const { _id, codigo, nombre, profesor_id, carrera } = req.body; // carrera STRING
     const created = await Curso.create({
       _id: _id || undefined,
       codigo,
       nombre,
       profesor_id,
+      ...(carrera !== undefined ? { carrera: (carrera || '').trim() } : {}),
     });
 
     const map = await buildProfesorNameMap([created]);
@@ -109,13 +143,15 @@ exports.update = async (req, res) => {
     if (!isAdmin(req)) return res.status(403).json({ message: 'No autorizado' });
 
     const { id } = req.params;
-    const { codigo, nombre, profesor_id } = req.body;
+    const { codigo, nombre, profesor_id, carrera } = req.body;
+
     const updated = await Curso.findByIdAndUpdate(
       id,
       {
         ...(codigo !== undefined && { codigo }),
         ...(nombre !== undefined && { nombre }),
         ...(profesor_id !== undefined && { profesor_id }),
+        ...(carrera !== undefined && { carrera: (carrera || '').trim() }),
       },
       { new: true }
     ).lean();

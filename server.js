@@ -46,11 +46,12 @@ app.get('/admin-usuarios.html', auth(true), (req, res) => {
 const cursosRoutes = require('./routes/cursos.routes');
 app.use('/api/cursos', cursosRoutes);
 
-// (opcional) proteger la vista cursos.html como hiciste con otras
 app.get('/cursos.html', auth(true), (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'cursos.html'));
 });
 
+app.get('/crear-curso.html',  auth(true), (req,res)=>res.sendFile(path.join(__dirname,'view','crear-curso.html')));
+app.get('/editar-curso.html', auth(true), (req,res)=>res.sendFile(path.join(__dirname,'view','editar-curso.html')));
 
 
 // ===== Archivos estáticos SIN index automático =====
