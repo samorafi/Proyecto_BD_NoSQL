@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Detalle del Proyecto</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+</head>
+<body class="bg-light">
+
+<header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff;color:white;">
+  <h1 class="m-0"><a id="homeLink" href="#" style="color:white;text-decoration:none;">Gestor Académico</a></h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+
+<nav id="mainNav">
+    <ul class="menu">
+      <li><a href="/perfil.html">Perfil</a></li>
+      <li><a href="gestion-academica.html" class="selectedNav">Gestión Académica</a></li>
+      <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
+      <li><a href="#">Estadísticas</a></li>
+      <li><a href="#">Logs</a></li>
+      <li class="role-only" data-roles="administrador" style="display:none;"><a href="/admin-usuarios.html">Gestión de Usuarios</a>
+    </ul>
+  </nav>
+
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 id="hTitle" class="text-primary m-0">Proyecto</h2>
+    <a href="/proyectos.html" class="btn btn-outline-secondary btn-sm">← Volver</a>
+  </div>
+
+  <div id="alertBox" class="alert d-none" role="alert"></div>
+
+  <div class="card shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge bg-secondary" id="badgeEstado">—</span>
+        <small class="text-muted">Creado: <span id="txtFecha">—</span></small>
+      </div>
+
+      <p id="pDesc" class="mb-3 text-muted">—</p>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <h6 class="mb-1">Curso</h6>
+          <div class="border rounded p-2">
+            <div><strong id="cursoNombre">—</strong></div>
+            <div class="text-muted small">Código: <span id="cursoCodigo">—</span></div>
+            <div class="text-muted small">Carrera: <span id="cursoCarrera">—</span></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <h6 class="mb-1">Miembros del proyecto</h6>
+          <ul id="ulMiembros" class="list-group list-group-flush border rounded"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== NUEVO: Equipos por proyecto ====== -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h5 class="m-0">Equipos <span id="eqCount" class="badge bg-light text-dark ms-1">0</span></h5>
+        <a id="btnCrearEquipo" href="/crear-equipo.html" class="btn btn-sm btn-primary" style="display:none;">+ Crear equipo</a>
+      </div>
+      <div id="equiposWrap" class="list-group"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+  function qs(n){ return new URLSearchParams(location.search).get(n); }
+  function cap(s){ return s? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
+  function showAlert(msg,type='danger'){ const box=document.getElementById('alertBox'); box.textContent=msg||'Ocurrió un error'; box.className='alert alert-'+type; }
+  function hideAlert(){ document.getElementById('alertBox').className='alert d-none'; }
+  function fmtDateISO(d){ try{ const dt=new Date(d); return dt.toLocaleDateString(); }catch{ return '—'; } }
+
+  async function getMe(){ const r=await fetch('/api/auth/me'); if(!r.ok) throw new Error('No autenticado'); return r.json(); }
+  async function getProyecto(id){ const r=await fetch('/api/proyectos/'+encodeURIComponent(id)); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+
+  (async ()=>{
+    try{
+      const id = qs('id');
+      if(!id){ showAlert('Falta el parámetro id'); return; }
+
+      const me = await getMe();
+      const user = me.user || {};
+      const rol  = (user.rolNombre || 'estudiante').toLowerCase();
+
+      const home = rol==='administrador'?'/index-admin.html': rol==='profesor'?'/index-profesor.html':'/index-estudiante.html';
+      document.getElementById('homeLink').href=home;
+      const info=document.getElementById('userInfo'); info.textContent=`${user.nombre} · ${cap(rol)}`; info.style.display='inline-flex';
+      const logout=document.getElementById('logoutBtn'); logout.style.display='inline-block';
+      logout.onclick = async()=>{ try{await fetch('/api/auth/logout',{method:'POST'});}catch{} window.location.href='/login.html'; };
+
+      const p = await getProyecto(id);
+
+      // encabezado
+      document.getElementById('hTitle').textContent = p.nombre || 'Proyecto';
+      document.getElementById('badgeEstado').textContent = p.estado || '—';
+      document.getElementById('txtFecha').textContent = fmtDateISO(p.fecha_creacion);
+      document.getElementById('pDesc').textContent = p.descripcion || '—';
+
+      // curso
+      document.getElementById('cursoNombre').textContent  = p?.curso?.nombre  || '—';
+      document.getElementById('cursoCodigo').textContent  = p?.curso?.codigo  || '—';
+      document.getElementById('cursoCarrera').textContent = p?.curso?.carrera || '—';
+
+      // miembros (del proyecto)
+      const ul = document.getElementById('ulMiembros');
+      ul.innerHTML = (p.miembros||[]).map(m => {
+        return `<li class="list-group-item d-flex justify-content-between">
+                  <span>${m.nombre} <span class="text-muted">(${cap(m.rol)})</span></span>
+                  <small class="text-muted">${m.user_id}</small>
+                </li>`;
+      }).join('') || `<li class="list-group-item">Sin miembros</li>`;
+
+      // ====== Render equipos ======
+      const canCreateEquipo = (rol === 'profesor' || rol === 'administrador');
+      const btnCrear = document.getElementById('btnCrearEquipo');
+      if (canCreateEquipo){ btnCrear.style.display='inline-block'; btnCrear.href = `/crear-equipo.html?proyecto=${encodeURIComponent(id)}`; }
+
+      const wrap = document.getElementById('equiposWrap');
+      const eqs = Array.isArray(p.equipos) ? p.equipos : [];
+      document.getElementById('eqCount').textContent = eqs.length;
+
+      if (!eqs.length){
+        wrap.innerHTML = `<div class="list-group-item text-muted">Sin equipos creados.</div>`;
+      } else {
+        wrap.innerHTML = eqs.map(e => {
+          const miembros = (e.miembros||[]).map(m => m.nombre).join(', ') || 'Sin miembros';
+          return `<a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="fw-semibold">${e.nombre}</div>
+                      <div class="small text-muted">${miembros}</div>
+                    </div>
+                    <span class="badge bg-light text-dark">${(e.miembros||[]).length}</span>
+                  </a>`;
+        }).join('');
+      }
+
+    }catch(e){
+      window.location.href = '/login.html';
+    }
+  })();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -46,6 +46,10 @@ app.get('/admin-usuarios.html', auth(true), (req, res) => {
 const cursosRoutes = require('./routes/cursos.routes');
 app.use('/api/cursos', cursosRoutes);
 
+const equiposRoutes = require('./routes/equipos.routes');
+app.use('/api/equipos', equiposRoutes);
+
+
 app.get('/cursos.html', auth(true), (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'cursos.html'));
 });
