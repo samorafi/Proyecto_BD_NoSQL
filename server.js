@@ -34,12 +34,23 @@ app.get('/perfil.html', auth(true), (req, res) => {
 const adminUsersRoutes = require('./routes/admin.users.routes');
 app.use('/api/admin', adminUsersRoutes);
 
+
 app.get('/admin-usuarios.html', auth(true), (req, res) => {
   if ((req.user?.rolNombre || '').toLowerCase() !== 'administrador') {
     return res.redirect('/dashboard');
   }
   res.sendFile(path.join(__dirname, 'view', 'admin-usuarios.html'));
 });
+
+// server.js
+const cursosRoutes = require('./routes/cursos.routes');
+app.use('/api/cursos', cursosRoutes);
+
+// (opcional) proteger la vista cursos.html como hiciste con otras
+app.get('/cursos.html', auth(true), (req, res) => {
+  res.sendFile(path.join(__dirname, 'view', 'cursos.html'));
+});
+
 
 
 // ===== Archivos estáticos SIN index automático =====

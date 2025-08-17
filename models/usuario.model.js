@@ -10,7 +10,8 @@ const UsuarioSchema = new mongoose.Schema({
   rol_id: { type: String, ref: 'Rol', required: true },
   activo: { type: Boolean, default: true },
   carrera: { type: String },
-  password: { type: String, required: true }
+  password: { type: String, required: true },
+  cursos_ids: { type: [String], default: [] }
 }, { collection: 'usuarios', versionKey: false });
 
 module.exports = mongoose.model('Usuario', UsuarioSchema);

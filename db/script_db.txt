@@ -372,3 +372,34 @@ db.usuarios.updateMany(
 
 db.usuarios.createIndex({ correo: 1 }, { unique: true });
 
+
+db.createCollection("carreras");
+
+db.carreras.updateOne(
+  { _id: "car001" },
+  { $setOnInsert: { nombre: "Ingeniería en Sistemas", codigo: "CARR-001" } },
+  { upsert: true }
+);
+
+db.carreras.updateOne(
+  { _id: "car002" },
+  { $setOnInsert: { nombre: "Programación", codigo: "CARR-002" } },
+  { upsert: true }
+);
+
+db.carreras.updateOne(
+  { _id: "car003" },
+  { $setOnInsert: { nombre: "Carrera C", codigo: "CARR-003" } },
+  { upsert: true }
+);
+db.carreras.updateOne(
+  { _id: "car004" },
+  { $setOnInsert: { nombre: "Carrera D", codigo: "CARR-004" } },
+  { upsert: true }
+);
+
+db.cursos.updateOne({ _id: "c001" }, { $set: { carrera_id: "car001" } });
+db.cursos.updateOne({ _id: "c003" }, { $set: { carrera_id: "car001" } });
+db.cursos.updateOne({ _id: "c004" }, { $set: { carrera_id: "car001" } });
+db.cursos.updateOne({ _id: "c005" }, { $set: { carrera_id: "car001" } });
+db.cursos.updateOne({ _id: "c002" }, { $set: { carrera_id: "car002" } });
