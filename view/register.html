@@ -36,10 +36,15 @@
             <label class="form-label">Correo</label>
             <input class="form-control" type="email" name="correo" required/>
           </div>
+
+          <!-- Carrera: ahora un dropdown -->
           <div class="col-12">
             <label class="form-label">Carrera</label>
-            <input class="form-control" name="carrera"/>
+            <select class="form-select" name="carrera" id="carreraSelect" required>
+              <option value="">Cargando carreras...</option>
+            </select>
           </div>
+
           <div class="col-12">
             <label class="form-label">Rol</label>
             <select class="form-select" name="rol_id" id="rolSelect" required>
@@ -68,6 +73,7 @@
 </footer>
 
 <script>
+  // Home del header según sesión (igual que tenías)
   (async () => {
     try {
       const r = await fetch('/api/auth/me');
@@ -79,27 +85,47 @@
         if (rol === 'administrador') home = '/index-admin.html';
         document.getElementById('homeLink').href = home;
       } else {
-        // si no hay sesión, apunta al login
         document.getElementById('homeLink').href = '/login.html';
       }
     } catch { document.getElementById('homeLink').href = '/login.html'; }
   })();
 
-  // Cargar roles permitidos
+  // Cargar CARRERAS (nuevo)
+  (async () => {
+    const sel = document.getElementById('carreraSelect');
+    try {
+      const res = await fetch('/api/auth/carreras');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const { carreras } = await res.json();
+      if (!carreras || !carreras.length) {
+        sel.innerHTML = `<option value="">No hay carreras disponibles</option>`;
+        sel.disabled = true;
+        return;
+      }
+      sel.innerHTML = '';
+      carreras.forEach(c => {
+        const opt = document.createElement('option');
+        // Guardamos el NOMBRE como value, porque el backend espera "carrera" (string)
+        opt.value = c.nombre;
+        opt.textContent = c.nombre;
+        sel.appendChild(opt);
+      });
+    } catch (e) {
+      console.error('Error cargando carreras:', e);
+      sel.innerHTML = `<option value="">No se pudieron cargar las carreras</option>`;
+      sel.disabled = true;
+    }
+  })();
+
+  // Cargar ROLES permitidos (como antes)
   (async () => {
     const sel = document.getElementById('rolSelect');
-
     try {
       const res = await fetch('/api/auth/roles');
       if (!res.ok) {
-        console.warn('GET /api/auth/roles no OK:', res.status);
-        sel.innerHTML = `
-          <option value="r001">Estudiante</option>
-          <option value="r002">Profesor</option>
-        `;
+        sel.innerHTML = `<option value="r001">Estudiante</option><option value="r002">Profesor</option>`;
         return;
       }
-
       const { roles } = await res.json();
       sel.innerHTML = '';
       (roles || []).forEach(r => {
@@ -108,23 +134,16 @@
         opt.textContent = r.nombre.charAt(0).toUpperCase() + r.nombre.slice(1);
         sel.appendChild(opt);
       });
-
       if (!sel.options.length) {
-        sel.innerHTML = `
-          <option value="r001">Estudiante</option>
-          <option value="r002">Profesor</option>
-        `;
+        sel.innerHTML = `<option value="r001">Estudiante</option><option value="r002">Profesor</option>`;
       }
     } catch (e) {
       console.error('Error de red /api/auth/roles:', e);
-      sel.innerHTML = `
-        <option value="r001">Estudiante</option>
-        <option value="r002">Profesor</option>
-      `;
+      sel.innerHTML = `<option value="r001">Estudiante</option><option value="r002">Profesor</option>`;
     }
   })();
 
-  // Enviar registro
+  // Enviar registro (igual que tenías)
   document.getElementById('registerForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('msg');
@@ -152,7 +171,6 @@
         msg.classList.add('text-danger');
         return;
       }
-      // Registrado y logueado → redirige
       window.location.href = json.redirectUrl || '/dashboard';
     } catch (err) {
       msg.textContent = 'Error de red: ' + err.message;

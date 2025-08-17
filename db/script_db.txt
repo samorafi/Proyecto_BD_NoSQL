@@ -397,3 +397,8 @@ db.cursos.updateOne(
   { _id: "c005" },
   { $set: { carrera: "Ingeniería en Sistemas" } }
 );
+
+db.carreras.insertMany([
+  { nombre: "Programación" },
+  { nombre: "Ingeniería en Sistemas" }
+])

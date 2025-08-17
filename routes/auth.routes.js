@@ -20,6 +20,20 @@ function signToken(user, rolNombre) {
   });
 }
 
+router.get('/carreras', async (_req, res) => {
+  try {
+    const carreras = await mongoose.connection
+      .collection('carreras')
+      .find({}, { projection: { _id: 1, nombre: 1 } })
+      .sort({ nombre: 1 })
+      .toArray();
+    res.json({ carreras });
+  } catch (e) {
+    console.error('GET /api/auth/carreras', e);
+    res.status(500).json({ error: 'Error obteniendo carreras' });
+  }
+});
+
 router.get('/roles', async (_req, res) => {
   try {
     const roles = await Rol.find(
