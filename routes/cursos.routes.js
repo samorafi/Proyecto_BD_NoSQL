@@ -1,14 +1,18 @@
 // routes/cursos.routes.js
 const express = require('express');
 const router = express.Router();
+const { auth } = require('../middleware/auth');
+const cursosCtrl = require('../controllers/cursos.controller');
 
-// diagnóstico: si ves esto al arrancar, ya es Express Router
+router.use(auth(true));
+
+// Diagnóstico de uso Express Router
 console.log('[cursos.routes] usando express.Router():', typeof router.use);
 
-const cursosCtrl = require('../controllers/cursos.controller');
-const { auth }   = require('../middleware/auth');
+router.get('/carreras', cursosCtrl.listarCarreras);
+router.get('/profes',   cursosCtrl.listarProfesores);
 
-// OJO: auth(true) debe devolver una función (middleware)
+//auth(true) debe devolver una función de Middleware
 router.use((req, res, next) => auth(true)(req, res, next));
 
 // sanity check para aislar errores de wiring
@@ -24,3 +28,5 @@ router.put('/:id',             cursosCtrl.update);   // admin validado en contro
 router.delete('/:id',          cursosCtrl.remove);   // admin validado en controller
 
 module.exports = router;
+
+ 

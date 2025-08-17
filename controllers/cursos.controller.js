@@ -1,12 +1,8 @@
 // controllers/cursos.controller.js
-// Reglas:
-// - admin: ve todos (puede crear/editar/eliminar)
-// - profesor: solo cursos donde profesor_id === su _id
-// - estudiante: solo cursos donde curso.carrera == usuario.carrera (por NOMBRE; case/acentos-insensible)
-//   Si la carrera no viene en req.user, se obtiene desde la BD.
-
-const Curso = require('../models/curso.model');
-const Usuario = require('../models/usuario.model');
+const mongoose = require('mongoose');
+const Curso    = require('../models/curso.model');
+const Usuario  = require('../models/usuario.model');
+const Rol      = require('../models/rol.model');
 
 // ===== Helpers =====
 function isAdmin(req) {
@@ -36,6 +32,32 @@ function normalizeCurso(c, nameById) {
     profesor: nameById?.[String(c.profesor_id)] || String(c.profesor_id || '—'),
   };
 }
+
+async function nextCodigoCUR() {
+  const last = await Curso.findOne(
+    { codigo: /^CUR-\d{3,}$/ },
+  ).sort({ codigo: -1 }).lean();
+
+  const lastNum = last ? parseInt(String(last.codigo).slice(4), 10) : 0;
+  const next = (Number.isFinite(lastNum) ? lastNum : 0) + 1;
+  return `CUR-${String(next).padStart(3, '0')}`;
+}
+
+// Listado de carreras (para el dropdown de la vista)
+exports.listarCarreras = async (_req, res) => {
+  try {
+    const carreras = await mongoose.connection
+      .collection('carreras')
+      .find({}, { projection: { _id: 1, nombre: 1 } })
+      .sort({ nombre: 1 })
+      .toArray();
+
+    res.json({ carreras });
+  } catch (e) {
+    console.error('listarCarreras error:', e);
+    res.status(500).json({ message: 'Error listando carreras' });
+  }
+};
 
 // =====================
 // Listado por rol (para la vista)
@@ -91,6 +113,29 @@ exports.listadoPorRol = async (req, res) => {
   }
 };
 
+exports.listarProfesores = async (req, res) => {
+  try {
+    const Usuario = require('../models/usuario.model');
+    const carrera = (req.query.carrera || '').trim();
+
+    const filter = { activo: true, rol_id: 'r002' };
+    if (carrera) filter.carrera = carrera;
+
+    const profesores = await Usuario.find(
+      filter,
+      { _id: 1, nombre: 1, correo: 1, carrera: 1 }
+    )
+      .collation({ locale: 'es', strength: 1 })
+      .sort({ nombre: 1 })
+      .lean();
+
+    return res.json({ profesores });
+  } catch (e) {
+    console.error('listarProfesores error:', e);
+    return res.status(500).json({ message: 'Error listando profesores' });
+  }
+};
+
 // =====================
 // CRUD (admin)
 // =====================
@@ -117,26 +162,84 @@ exports.getById = async (req, res) => {
   }
 };
 
+async function resolverNombreCarrera({ carrera_id, carreraNombre }) {
+  const coll = mongoose.connection.collection('carreras');
+
+  if (carreraNombre && carreraNombre.trim()) {
+    return carreraNombre.trim();
+  }
+
+  if (!carrera_id) return null;
+
+  let car = await coll.findOne(
+    { _id: carrera_id },
+    { projection: { nombre: 1 } }
+  );
+
+  if (!car && mongoose.Types.ObjectId.isValid(carrera_id)) {
+    car = await coll.findOne(
+      { _id: new mongoose.Types.ObjectId(carrera_id) },
+      { projection: { nombre: 1 } }
+    );
+  }
+
+  if (!car) {
+    car = await coll.findOne(
+      { nombre: carrera_id },
+      { projection: { nombre: 1 }, collation: { locale: 'es', strength: 1 } }
+    );
+  }
+
+  return car ? car.nombre : null;
+}
+
 exports.create = async (req, res) => {
   try {
-    if (!isAdmin(req)) return res.status(403).json({ message: 'No autorizado' });
+    if ((req.user?.rolNombre || '').toLowerCase() !== 'administrador') {
+      return res.status(403).json({ message: 'No autorizado' });
+    }
 
-    const { _id, codigo, nombre, profesor_id, carrera } = req.body; // carrera STRING
+    const { _id, nombre, profesor_id, carrera_id, carrera } = req.body;
+    if (!nombre || !profesor_id || (!carrera_id && !carrera)) {
+      return res.status(400).json({ message: 'Faltan campos obligatorios (nombre, profesor_id, carrera/carrera_id)' });
+    }
+
+    const carreraNombre = await resolverNombreCarrera({
+      carrera_id,
+      carreraNombre: carrera
+    });
+
+    if (!carreraNombre) {
+      return res.status(400).json({ message: 'Carrera no existe' });
+    }
+
+    const prof = await Usuario.findById(profesor_id).lean();
+    if (!prof) return res.status(400).json({ message: 'Profesor no existe' });
+
+    const codigo = await nextCodigoCUR();
+
     const created = await Curso.create({
       _id: _id || undefined,
       codigo,
       nombre,
       profesor_id,
-      ...(carrera !== undefined ? { carrera: (carrera || '').trim() } : {}),
+      carrera: carreraNombre
     });
 
-    const map = await buildProfesorNameMap([created]);
-    res.status(201).json(normalizeCurso(created.toObject(), map));
+    return res.status(201).json({
+      id: String(created._id),
+      codigo: created.codigo,
+      nombre: created.nombre,
+      carrera: created.carrera,
+      profesor: prof.nombre || prof._id
+    });
   } catch (err) {
     console.error('create error:', err);
-    res.status(500).json({ message: 'Error creando curso' });
+    return res.status(500).json({ message: 'Error creando curso' });
   }
 };
+
+
 
 exports.update = async (req, res) => {
   try {

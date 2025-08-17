@@ -1,12 +1,17 @@
 // models/curso.model.js
-const { Schema, model } = require('mongoose');
+const mongoose = require('mongoose');
 
-const CursoSchema = new Schema({
-  _id:         { type: String },                 
+const cursoSchema = new mongoose.Schema({
+  _id:         { type: String, default: () => new mongoose.Types.ObjectId().toString() },
   codigo:      { type: String, required: true, unique: true },
   nombre:      { type: String, required: true },
-  profesor_id: { type: String, required: true }, 
-  carrera:     { type: String },                 
-}, { collection: 'cursos', versionKey: false });
+  profesor_id: { type: String, ref: 'Usuario', required: true },
+  carrera:     { type: String, required: true }
+}, {
+  collection: 'cursos',
+  timestamps: true,
+  versionKey: false
+});
 
-module.exports = model('Curso', CursoSchema);
+module.exports = mongoose.model('Curso', cursoSchema);
+ 

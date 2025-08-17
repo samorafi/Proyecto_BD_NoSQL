@@ -46,15 +46,21 @@ app.get('/admin-usuarios.html', auth(true), (req, res) => {
 const cursosRoutes = require('./routes/cursos.routes');
 app.use('/api/cursos', cursosRoutes);
 
-const equiposRoutes = require('./routes/equipos.routes');
-app.use('/api/equipos', equiposRoutes);
+//const equiposRoutes = require('./routes/equipo.routes');
+//app.use('/api/equipos', equiposRoutes);
 
 
 app.get('/cursos.html', auth(true), (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'cursos.html'));
 });
 
-app.get('/crear-curso.html',  auth(true), (req,res)=>res.sendFile(path.join(__dirname,'view','crear-curso.html')));
+app.get('/crear-curso.html', auth(true), (req, res) => {
+  if ((req.user?.rolNombre || '').toLowerCase() !== 'administrador') {
+    return res.redirect('/dashboard');
+  }
+  res.sendFile(path.join(__dirname, 'view', 'crear-curso.html'));
+});
+
 app.get('/editar-curso.html', auth(true), (req,res)=>res.sendFile(path.join(__dirname,'view','editar-curso.html')));
 
 
