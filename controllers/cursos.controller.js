@@ -176,3 +176,22 @@ exports.remove = async (req, res) => {
     res.status(500).json({ message: 'Error eliminando curso' });
   }
 };
+
+// Buscar cursos por nombre de carrera
+exports.buscarPorCarreraNombre = async (req, res) => {
+  try {
+    const nombre = (req.query.nombre || req.query.q || '').trim();
+    if (!nombre) return res.status(400).json({ message: 'Falta el nombre de la carrera (q o nombre)' });
+
+    const cursos = await Curso.find({ carrera: nombre })
+                              .collation({ locale: 'es', strength: 1 })
+                              .lean();
+
+    const map = await buildProfesorNameMap(cursos);
+    res.json((cursos || []).map(c => normalizeCurso(c, map)));
+  } catch (err) {
+    console.error('buscarPorCarreraNombre error:', err);
+    res.status(500).json({ message: 'Error buscando cursos por carrera' });
+  }
+};
+
