@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Listado de Cursos</title>
+  <title>Listado de Equipos</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -34,9 +34,9 @@
   <!-- Main -->
   <main class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-      <h2 class="text-primary m-0">Listado de Cursos</h2>
+      <h2 class="text-primary m-0">Listado de Equipos</h2>
       <div class="d-flex gap-2">
-        <a id="btnCrear" href="/crear-curso.html" class="btn btn-primary btn-sm" style="display:none;">+ Crear curso</a>
+        <a id="btnCrear" href="/crear-equipo.html" class="btn btn-primary btn-sm" style="display:none;">+ Crear equipo</a>
         <button id="btnRefrescar" class="btn btn-outline-secondary btn-sm">Actualizar</button>
       </div>
     </div>
@@ -49,15 +49,14 @@
           <table class="table table-sm align-middle">
             <thead>
               <tr>
-                <th style="width:220px">Carrera</th>
-                <th>Curso</th>
-                <th style="width:140px">Código</th>
-                <th style="width:240px">Profesor</th>
+                <th style="width:220px">Proyecto</th>
+                <th>Equipo</th>
+                <th style="width:320px">Miembros</th>
                 <th id="thAcciones" style="width:170px; display:none;">Acciones</th>
               </tr>
             </thead>
-            <tbody id="tbodyCursos">
-              <tr><td colspan="5">Cargando...</td></tr>
+            <tbody id="tbodyEquipos">
+              <tr><td colspan="4">Cargando...</td></tr>
             </tbody>
           </table>
         </div>
@@ -79,6 +78,13 @@
       if(!box) return;
       box.classList.add('d-none');
     }
+    function previewMiembros(arr, max = 3){
+      if(!Array.isArray(arr) || arr.length===0) return '—';
+      const nombres = arr.map(m => m?.nombre || '—');
+      const head = nombres.slice(0, max).join(', ');
+      const more = nombres.length > max ? ` +${nombres.length - max}` : '';
+      return head + more;
+    }
 
     // ===== API =====
     async function getMe(){
@@ -86,16 +92,16 @@
       if(!r.ok) throw new Error('No autenticado');
       return r.json();
     }
-    async function getCursosPorRol(){
-      const r = await fetch('/api/cursos/listado-por-rol');
+    async function getEquiposPorRol(){
+      const r = await fetch('/api/equipos/listado-por-rol');
       if(!r.ok){
         const txt = await r.text().catch(()=> '');
         throw new Error(txt || 'No se pudo cargar el listado');
       }
       return r.json();
     }
-    async function eliminarCurso(id){
-      const r = await fetch('/api/cursos/' + encodeURIComponent(id), { method:'DELETE' });
+    async function eliminarEquipo(id){
+      const r = await fetch('/api/equipos/' + encodeURIComponent(id), { method:'DELETE' });
       if(!r.ok){
         const txt = await r.text().catch(()=> '');
         throw new Error(txt || 'No se pudo eliminar');
@@ -106,73 +112,72 @@
     // ===== UI =====
     function renderTabla(payload){
       hideAlert();
-      const { canEdit, canDelete, cursos } = payload || {};
-      const tbody = document.getElementById('tbodyCursos');
+      const { canCreate, canEdit, canDelete, equipos } = payload || {};
+      const tbody = document.getElementById('tbodyEquipos');
       const thAcc = document.getElementById('thAcciones');
       const btnCrear = document.getElementById('btnCrear');
 
       const showActions = !!(canEdit || canDelete);
       if(thAcc) thAcc.style.display = showActions ? '' : 'none';
-      if(btnCrear) btnCrear.style.display = showActions ? 'inline-block' : 'none';
+      if(btnCrear) btnCrear.style.display = canCreate ? 'inline-block' : 'none';
 
       if(!tbody) return;
-      const list = Array.isArray(cursos) ? cursos : [];
+      const list = Array.isArray(equipos) ? equipos : [];
       if(list.length === 0){
-        tbody.innerHTML = `<tr><td colspan="${showActions?5:4}" class="text-muted">Sin cursos para mostrar.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="${showActions?4:3}" class="text-muted">Sin equipos para mostrar.</td></tr>`;
         return;
       }
 
-      tbody.innerHTML = list.map(c => {
+      tbody.innerHTML = list.map(e => {
         const acciones = showActions ? `
           <td>
             <div class="btn-group btn-group-sm">
-              <a class="btn btn-outline-primary" href="/editar-curso.html?id=${encodeURIComponent(c.id)}">Editar</a>
-              <button class="btn btn-outline-danger" data-id="${c.id}" onclick="borrarCurso(this)">Eliminar</button>
+              <a class="btn btn-outline-primary" href="/editar-equipo.html?id=${encodeURIComponent(e.id)}">Editar</a>
+              <button class="btn btn-outline-danger" data-id="${e.id}" onclick="borrarEquipo(this)">Eliminar</button>
             </div>
           </td>` : '';
 
         return `
           <tr>
-            <td>${(c.carrera ?? '—')}</td>
-            <td>${(c.nombre ?? '—')}</td>
-            <td>${(c.codigo ?? '—')}</td>
-            <td>${(c.profesor ?? '—')}</td>
+            <td>${(e.proyecto ?? '—')}</td>
+            <td>${(e.nombre ?? '—')}</td>
+            <td>${previewMiembros(e.miembros)}</td>
             ${acciones}
           </tr>`;
       }).join('');
     }
 
-    async function cargarCursos(){
-      const tbody = document.getElementById('tbodyCursos');
-      if(tbody) tbody.innerHTML = `<tr><td colspan="5">Cargando...</td></tr>`;
+    async function cargarEquipos(){
+      const tbody = document.getElementById('tbodyEquipos');
+      if(tbody) tbody.innerHTML = `<tr><td colspan="4">Cargando...</td></tr>`;
       try{
-        const data = await getCursosPorRol();
+        const data = await getEquiposPorRol();
         renderTabla(data);
       }catch(err){
-        console.error('Error cargando cursos:', err);
-        showAlert('No se pudieron cargar los cursos. Detalle: ' + (err.message || err));
-        if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-danger">No se pudieron cargar los cursos.</td></tr>`;
+        console.error('Error cargando equipos:', err);
+        showAlert('No se pudieron cargar los equipos. Detalle: ' + (err.message || err));
+        if(tbody) tbody.innerHTML = `<tr><td colspan="4" class="text-danger">No se pudieron cargar los equipos.</td></tr>`;
       }
     }
 
-    async function borrarCurso(btn){
+    async function borrarEquipo(btn){
       const id = btn?.getAttribute('data-id');
       if(!id) return;
-      if(!confirm('¿Eliminar este curso?')) return;
+      if(!confirm('¿Eliminar este equipo?')) return;
       try{
-        await eliminarCurso(id);
-        await cargarCursos();
+        await eliminarEquipo(id);
+        await cargarEquipos();
       }catch(err){
-        console.error('Error eliminando curso:', err);
-        showAlert('No se pudo eliminar el curso. Detalle: ' + (err.message || err));
+        console.error('Error eliminando equipo:', err);
+        showAlert('No se pudo eliminar el equipo. Detalle: ' + (err.message || err));
       }
     }
-    window.borrarCurso = borrarCurso;
+    window.borrarEquipo = borrarEquipo;
 
     // ===== Bootstrap de la página =====
     (async () => {
       try {
-        const me = await getMe(); // si falla, sí redirige a login
+        const me = await getMe(); // si falla, redirige a login
         const user = me.user || {};
         const rol  = (user.rolNombre || 'estudiante');
         const home = rol==='profesor' ? '/index-profesor.html'
@@ -191,9 +196,9 @@
         }
         const homeLink = document.getElementById('homeLink'); if(homeLink) homeLink.href = home;
 
-        await cargarCursos();
+        await cargarEquipos();
         const btnRefrescar = document.getElementById('btnRefrescar');
-        if(btnRefrescar) btnRefrescar.addEventListener('click', cargarCursos);
+        if(btnRefrescar) btnRefrescar.addEventListener('click', cargarEquipos);
 
       } catch (e) {
         window.location.href = '/login.html';

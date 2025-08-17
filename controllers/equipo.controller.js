@@ -1,212 +1,178 @@
+// controllers/equipo.controller.js
 const Equipo   = require('../models/equipo.model');
-const Proyecto = require('../models/proyecto.model');
-const Curso    = require('../models/curso.model');
-const Usuario  = require('../models/usuario.model');
+// Usa tus modelos actuales; solo deben tener _id como string
+const Proyecto = require('../models/proyecto.model');   // {_id:"p001", nombre: "...", ...}
+const Usuario  = require('../models/usuario.model');    // {_id:"u001", nombre:"...", rolNombre:"..."}
 
-function getRol(req){ return (req.user?.rolNombre || 'estudiante').toLowerCase(); }
-function isAdmin(req){ return getRol(req) === 'administrador'; }
-function isProfesor(req){ return getRol(req) === 'profesor'; }
-function getUserId(req){ return req.user?._id || req.user?.id || req.user?.uid; }
-
-// ----- helpers (mismos criterios que en proyectos.controller) -----
-async function cursosPermitidosIds(req){
-  const rol = getRol(req);
-  const uid = getUserId(req);
-
-  if (rol === 'administrador') return null;
-  if (rol === 'profesor') {
-    const cursos = await Curso.find({ profesor_id: uid }, { _id:1 }).lean();
-    return cursos.map(c => String(c._id));
-  }
-  // estudiante → por nombre de carrera
-  let carreraUser = (req.user?.carrera || '').trim();
-  if (!carreraUser && uid){
-    const u = await Usuario.findById(uid, { carrera:1 }).lean();
-    carreraUser = (u?.carrera || '').trim();
-  }
-  if (!carreraUser) return [];
-  const cursos = await Curso.find({ carrera: carreraUser })
-                            .collation({ locale:'es', strength:1 })
-                            .select('_id').lean();
-  return cursos.map(c => String(c._id));
+// ===== helpers de auth/permisos (ajusta a tu middleware real) =====
+function isAdminOrProf(u) {
+  const r = (u?.rolNombre || '').toLowerCase();
+  return r === 'administrador' || r === 'profesor';
 }
+function canManage(u) { return isAdminOrProf(u); }
 
-// puede ver el proyecto?
-async function canViewProyecto(req, proyecto){
-  if (isAdmin(req)) return true;
-  const uid = getUserId(req);
-  const permitidos = await cursosPermitidosIds(req); // null=all, []=none
-  const byCurso = permitidos ? permitidos.includes(String(proyecto.id_curso)) : true;
-  const esMiembro = (proyecto.miembros||[]).some(m => String(m.user_id) === String(uid));
-  const esCreador = String(proyecto.creado_por) === String(uid);
-  return byCurso || esMiembro || esCreador;
-}
-
-// puede gestionar equipos de ese proyecto?
-function canManageEquipo(req){
-  return isAdmin(req) || isProfesor(req);
-}
-
-// Mapa {user_id: {nombre}}
-async function buildUsuarioMap(ids){
-  const uniq = [...new Set((ids||[]).filter(Boolean))];
-  if (!uniq.length) return {};
-  const users = await Usuario.find({ _id: { $in: uniq } }, { _id:1, nombre:1 }).lean();
-  const map = {};
-  for (const u of users) map[String(u._id)] = u;
-  return map;
-}
-
-// =============================
-// GET /api/equipos?proyecto=p001
-// =============================
-exports.listByProyecto = async (req, res) => {
+// ===================== LISTADO POR ROL =====================
+exports.listadoPorRol = async (req, res) => {
   try {
-    const id_proyecto = (req.query.proyecto || '').trim();
-    if (!id_proyecto) return res.json([]);
+    if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
-    const proyecto = await Proyecto.findById(id_proyecto).lean();
-    if (!proyecto) return res.status(404).json({ message: 'Proyecto no encontrado' });
-    if (!(await canViewProyecto(req, proyecto))) {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
+    const rolUser = (req.user.rolNombre || '').toLowerCase();
+    const match = {};
+    if (req.query.proyecto_id) match.id_proyecto = String(req.query.proyecto_id);
+    if (rolUser === 'estudiante') match.miembros = String(req.user._id);
 
-    const equipos = await Equipo.find({ id_proyecto }).lean();
-    const allMemberIds = [...new Set(equipos.flatMap(e => e.miembros||[]))];
-    const uMap = await buildUsuarioMap(allMemberIds);
+    const equipos = await Equipo.find(match).lean();
 
-    const data = equipos.map(e => ({
-      id: String(e._id),
+    // join proyectos
+    const projIds = [...new Set(equipos.map(e => e.id_proyecto).filter(Boolean))];
+    const proyectos = await Proyecto.find({ _id: { $in: projIds } }, { _id:1, nombre:1 }).lean();
+    const projMap = new Map(proyectos.map(p => [p._id, p.nombre]));
+
+    // join usuarios (miembros)
+    const memberIds = [...new Set(equipos.flatMap(e => e.miembros || []))];
+    const usuarios = memberIds.length
+      ? await Usuario.find({ _id: { $in: memberIds } }, { _id:1, nombre:1, rolNombre:1 }).lean()
+      : [];
+    const userMap = new Map(usuarios.map(u => [u._id, { _id: u._id, nombre: u.nombre, rol: u.rolNombre }]));
+
+    const payload = equipos.map(e => ({
+      id: e._id,
       nombre: e.nombre,
+      proyecto: projMap.get(e.id_proyecto) || '—',
       id_proyecto: e.id_proyecto,
-      miembros: (e.miembros||[]).map(uid => ({
-        user_id: uid,
-        nombre: uMap[uid]?.nombre || uid
-      }))
+      miembros: (e.miembros || []).map(uid => userMap.get(uid)).filter(Boolean) // [{_id, nombre, rol}]
     }));
 
-    res.json(data);
-  } catch (err) {
-    console.error('equipos.listByProyecto error:', err);
-    res.status(500).json({ message: 'Error listando equipos' });
+    res.json({
+      canCreate: canManage(req.user),
+      canEdit:   canManage(req.user),
+      canDelete: canManage(req.user),
+      equipos: payload
+    });
+  } catch (e) {
+    console.error('listado-por-rol equipos:', e);
+    res.status(500).send('No se pudo cargar el listado');
   }
 };
 
-// =============================
-// GET /api/equipos/:id
-// =============================
-exports.getById = async (req, res) => {
+// ===================== OBTENER UNO =====================
+exports.getUno = async (req, res) => {
   try {
-    const e = await Equipo.findById(req.params.id).lean();
-    if (!e) return res.status(404).json({ message: 'Equipo no encontrado' });
+    if (!req.user) return res.status(401).json({ error: 'No autenticado' });
 
-    const proyecto = await Proyecto.findById(e.id_proyecto).lean();
-    if (!proyecto) return res.status(404).json({ message: 'Proyecto no encontrado' });
-    if (!(await canViewProyecto(req, proyecto))) {
-      return res.status(403).json({ message: 'No autorizado' });
+    const e = await Equipo.findById(String(req.params.id)).lean();
+    if (!e) return res.status(404).json({ error: 'Equipo no encontrado' });
+
+    const rol = (req.user.rolNombre || '').toLowerCase();
+    if (rol === 'estudiante' && !(e.miembros || []).includes(String(req.user._id))) {
+      return res.status(403).json({ error: 'Sin permiso' });
     }
 
-    const uMap = await buildUsuarioMap(e.miembros || []);
+    const p = e.id_proyecto
+      ? await Proyecto.findById(e.id_proyecto, { _id:1, nombre:1 }).lean()
+      : null;
+
+    const users = (e.miembros || []).length
+      ? await Usuario.find({ _id: { $in: e.miembros } }, { _id:1, nombre:1, rolNombre:1 }).lean()
+      : [];
+
     res.json({
-      id: String(e._id),
+      _id: e._id,
       nombre: e.nombre,
       id_proyecto: e.id_proyecto,
-      miembros: (e.miembros||[]).map(uid => ({
-        user_id: uid, nombre: uMap[uid]?.nombre || uid
-      }))
+      proyecto: p?.nombre || '',
+      miembros: users.map(u => ({ _id: u._id, nombre: u.nombre, rol: u.rolNombre }))
     });
-  } catch (err) {
-    console.error('equipos.getById error:', err);
-    res.status(500).json({ message: 'Error obteniendo equipo' });
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo obtener el equipo' });
   }
 };
 
-// =============================
-// POST /api/equipos
-// body: { _id?, nombre, id_proyecto, miembros?: [userId] }
-// permisos: profesor/admin
-// =============================
-exports.create = async (req, res) => {
+// ===================== CATÁLOGOS =====================
+exports.getProyectos = async (_req, res) => {
   try {
-    if (!canManageEquipo(req)) return res.status(403).json({ message: 'No autorizado' });
+    const proyectos = await Proyecto.find({}, { _id:1, nombre:1 }).sort({ nombre:1 }).lean();
+    res.json({ proyectos });
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudieron cargar los proyectos' });
+  }
+};
+
+exports.getMiembrosCandidatos = async (req, res) => {
+  try {
+    const q = (req.query.q || '').trim();
+    const filter = { rolNombre: { $in: ['profesor', 'estudiante'] } };
+    if (q) filter.$or = [{ nombre: new RegExp(q, 'i') }, { email: new RegExp(q, 'i') }];
+    const usuarios = await Usuario.find(filter, { _id:1, nombre:1, rolNombre:1 })
+                                  .sort({ nombre:1 }).limit(300).lean();
+    res.json({ usuarios });
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudieron cargar los usuarios' });
+  }
+};
+
+// ===================== CRUD BÁSICO =====================
+exports.crear = async (req, res) => {
+  try {
+    if (!req.user || !canManage(req.user)) return res.status(403).json({ error: 'Sin permiso' });
     const { _id, nombre, id_proyecto, miembros } = req.body || {};
-    if (!nombre || !id_proyecto) return res.status(400).json({ message: 'Faltan campos: nombre, id_proyecto' });
+    if (!nombre || !id_proyecto) return res.status(400).json({ error: 'Faltan campos obligatorios' });
 
-    const proyecto = await Proyecto.findById(id_proyecto).lean();
-    if (!proyecto) return res.status(404).json({ message: 'Proyecto no encontrado' });
-    if (!(await canViewProyecto(req, proyecto))) {
-      return res.status(403).json({ message: 'No autorizado' });
+    // valida proyecto existe
+    const p = await Proyecto.findById(String(id_proyecto), { _id:1 }).lean();
+    if (!p) return res.status(400).json({ error: 'Proyecto inválido' });
+
+    // filtra miembros permitidos
+    let memberIds = [];
+    if (Array.isArray(miembros) && miembros.length) {
+      const users = await Usuario.find({ _id: { $in: miembros } }, { _id:1, rolNombre:1 }).lean();
+      memberIds = users.filter(u => ['profesor','estudiante'].includes((u.rolNombre||'').toLowerCase())).map(u => u._id);
     }
 
-    const e = await Equipo.create({
-      _id: _id || undefined,
-      nombre,
-      id_proyecto,
-      miembros: Array.isArray(miembros) ? miembros.filter(Boolean) : []
+    const eqId = _id || ('eq' + Date.now());
+    await Equipo.create({
+      _id: eqId,
+      nombre: String(nombre).trim(),
+      id_proyecto: String(id_proyecto),
+      miembros: memberIds,
+      creadoPor: String(req.user._id),
+      actualizadoPor: String(req.user._id)
     });
 
-    res.status(201).json({ id: String(e._id) });
-  } catch (err) {
-    console.error('equipos.create error:', err);
-    res.status(500).json({ message: 'Error creando equipo' });
+    res.json({ message: 'Equipo creado', id: eqId });
+  } catch (e) {
+    if (e?.code === 11000) return res.status(409).json({ error: 'Ya existe un equipo con ese nombre en el proyecto' });
+    res.status(500).json({ error: 'No se pudo crear el equipo' });
   }
 };
 
-// =============================
-// PUT /api/equipos/:id
-// permisos: profesor/admin
-// =============================
-exports.update = async (req, res) => {
+exports.actualizar = async (req, res) => {
   try {
-    if (!canManageEquipo(req)) return res.status(403).json({ message: 'No autorizado' });
-
-    const e = await Equipo.findById(req.params.id).lean();
-    if (!e) return res.status(404).json({ message: 'Equipo no encontrado' });
-
-    const proyecto = await Proyecto.findById(e.id_proyecto).lean();
-    if (!proyecto) return res.status(404).json({ message: 'Proyecto no encontrado' });
-    if (!(await canViewProyecto(req, proyecto))) {
-      return res.status(403).json({ message: 'No autorizado' });
+    if (!req.user || !canManage(req.user)) return res.status(403).json({ error: 'Sin permiso' });
+    const { nombre, id_proyecto, miembros } = req.body || {};
+    const update = { actualizadoPor: String(req.user._id) };
+    if (nombre) update.nombre = String(nombre).trim();
+    if (id_proyecto) update.id_proyecto = String(id_proyecto);
+    if (Array.isArray(miembros)) {
+      const users = await Usuario.find({ _id: { $in: miembros } }, { _id:1, rolNombre:1 }).lean();
+      update.miembros = users.filter(u => ['profesor','estudiante'].includes((u.rolNombre||'').toLowerCase())).map(u => u._id);
     }
-
-    const { nombre, miembros } = req.body || {};
-    const upd = await Equipo.findByIdAndUpdate(
-      req.params.id,
-      {
-        ...(nombre !== undefined && { nombre }),
-        ...(miembros !== undefined && { miembros: Array.isArray(miembros) ? miembros.filter(Boolean) : [] })
-      },
-      { new: true }
-    ).lean();
-
-    res.json({ id: String(upd._id) });
-  } catch (err) {
-    console.error('equipos.update error:', err);
-    res.status(500).json({ message: 'Error actualizando equipo' });
+    const eq = await Equipo.findByIdAndUpdate(String(req.params.id), update, { new:true, runValidators:true }).lean();
+    if (!eq) return res.status(404).json({ error: 'Equipo no encontrado' });
+    res.json({ message: 'Actualizado', id: eq._id });
+  } catch (e) {
+    if (e?.code === 11000) return res.status(409).json({ error: 'Ya existe un equipo con ese nombre en el proyecto' });
+    res.status(500).json({ error: 'No se pudo actualizar' });
   }
 };
 
-// =============================
-// DELETE /api/equipos/:id
-// permisos: profesor/admin
-// =============================
-exports.remove = async (req, res) => {
+exports.eliminar = async (req, res) => {
   try {
-    if (!canManageEquipo(req)) return res.status(403).json({ message: 'No autorizado' });
-
-    const e = await Equipo.findById(req.params.id).lean();
-    if (!e) return res.status(404).json({ message: 'Equipo no encontrado' });
-
-    const proyecto = await Proyecto.findById(e.id_proyecto).lean();
-    if (!proyecto) return res.status(404).json({ message: 'Proyecto no encontrado' });
-    if (!(await canViewProyecto(req, proyecto))) {
-      return res.status(403).json({ message: 'No autorizado' });
-    }
-
-    await Equipo.findByIdAndDelete(req.params.id);
-    res.json({ ok: true });
-  } catch (err) {
-    console.error('equipos.remove error:', err);
-    res.status(500).json({ message: 'Error eliminando equipo' });
+    if (!req.user || !canManage(req.user)) return res.status(403).json({ error: 'Sin permiso' });
+    const del = await Equipo.findByIdAndDelete(String(req.params.id)).lean();
+    if (!del) return res.status(404).json({ error: 'Equipo no encontrado' });
+    res.json({ message: 'Equipo eliminado' });
+  } catch (e) {
+    res.status(500).json({ error: 'No se pudo eliminar' });
   }
 };

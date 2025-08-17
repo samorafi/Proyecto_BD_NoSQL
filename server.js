@@ -97,6 +97,8 @@ app.get('/register.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'register.html'));
 });
 
+const equipoRoutes = require('./routes/equipo.routes');
+app.use('/api/equipos', equipoRoutes);
 // ===== Server =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

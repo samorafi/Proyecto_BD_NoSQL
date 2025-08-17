@@ -6,10 +6,11 @@
   <title>Editar curso</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css">
+  <style> header{background:#2a73ff;color:white;} </style>
 </head>
 <body class="bg-light">
 
-<header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff;color:white;">
+<header class="d-flex justify-content-between align-items-center p-3">
   <h1 class="m-0">
     <a id="homeLink" href="#" class="tituloNav" style="color:white;text-decoration:none;">Gestor Académico</a>
   </h1>
@@ -40,19 +41,15 @@
   <div class="card shadow-sm">
     <div class="card-body">
       <form id="cursoForm" class="row g-3">
+        <!-- Carrera -->
         <div class="col-md-6">
           <label class="form-label">Carrera</label>
           <select id="selCarrera" class="form-select" required>
-            <option value="">Seleccione…</option>
+            <option value="">Cargando carreras…</option>
           </select>
-          <div class="form-text">Se cargan desde la colección "carreras".</div>
         </div>
 
-        <div class="col-md-6">
-          <label class="form-label">Código</label>
-          <input id="inpCodigo" class="form-control" placeholder="CUR-001" required/>
-        </div>
-
+        <!-- Nombre del curso -->
         <div class="col-12">
           <label class="form-label">Curso (nombre)</label>
           <input id="inpNombre" class="form-control" placeholder="Programación Web" required/>
@@ -61,9 +58,9 @@
         <div class="col-md-6">
           <label class="form-label">Profesor</label>
           <select id="selProfesor" class="form-select" required>
-            <option value="">Seleccione…</option>
+            <option value="">Seleccione primero una carrera…</option>
           </select>
-          <div class="form-text">Lista de usuarios con rol Profesor.</div>
+          <div class="form-text">Se listan profesores activos de la carrera seleccionada.</div>
         </div>
 
         <div class="col-12 mt-2 d-flex gap-2">
@@ -77,76 +74,110 @@
 
 <script>
   // ===== Utils =====
-  function qs(name){ return new URLSearchParams(location.search).get(name); }
-  function cap(s){ return s ? s.charAt(0).toUpperCase()+s.slice(1) : ''; }
-  function showAlert(msg, type='danger'){ const box=document.getElementById('alertBox'); box.textContent=msg||'Ocurrió un error'; box.className='alert alert-'+type; }
-  function hideAlert(){ document.getElementById('alertBox').className='alert d-none'; }
-  const norm = s => (s||'').toString().trim().toLowerCase()
-                     .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const $ = (id)=>document.getElementById(id);
+  const cap = (s)=> s? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  const qs = (k)=> new URLSearchParams(location.search).get(k);
 
+  function showAlert(msg, type='danger'){ const b=$('alertBox'); b.textContent=msg||'Ocurrió un error'; b.className='alert alert-'+type; }
+  function hideAlert(){ $('alertBox').className='alert d-none'; }
+
+  const norm = s => (s||'').toString().trim().toLowerCase()
+                   .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   function setSelectedByText(selectEl, text){
     if(!selectEl) return;
-    const target = norm(text);
+    const t = norm(text);
     for(const opt of selectEl.options){
-      if(norm(opt.text) === target){ selectEl.value = opt.value; return; }
+      if(norm(opt.text) === t){ selectEl.value = opt.value; return; }
     }
   }
 
   // ===== API =====
-  async function getMe(){ const r=await fetch('/api/auth/me'); if(!r.ok) throw new Error('No autenticado'); return r.json(); }
-  async function getCurso(id){ const r=await fetch('/api/cursos/'+encodeURIComponent(id)); if(!r.ok) throw new Error(await r.text()); return r.json(); }
+  async function getMe(){
+    const r = await fetch('/api/auth/me', { credentials:'include' });
+    if(!r.ok) throw new Error('No autenticado');
+    return r.json();
+  }
 
-  async function updateCurso(id,payload){
-    const r=await fetch('/api/cursos/'+encodeURIComponent(id),{
-      method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+  async function getCurso(id){
+    const r = await fetch('/api/cursos/'+encodeURIComponent(id), { credentials:'include' });
+    if(!r.ok){
+      let txt=''; try{ txt = await r.text(); }catch{}
+      throw new Error(txt || 'No se pudo cargar el curso');
+    }
+    return r.json();
+  }
+
+  async function updateCurso(id, payload){
+    const r = await fetch('/api/cursos/'+encodeURIComponent(id),{
+      method:'PUT',
+      headers:{ 'Content-Type':'application/json' },
+      credentials:'include',
+      body: JSON.stringify(payload)
     });
-    if(!r.ok) throw new Error(await r.text());
+    if(!r.ok){
+      let txt=''; try{ txt = await r.text(); }catch{}
+      throw new Error(txt || 'No se pudo guardar');
+    }
     return r.json();
   }
 
   async function deleteCurso(id){
-    const r=await fetch('/api/cursos/'+encodeURIComponent(id),{ method:'DELETE' });
-    if(!r.ok) throw new Error(await r.text());
+    const r = await fetch('/api/cursos/'+encodeURIComponent(id),{
+      method:'DELETE',
+      credentials:'include'
+    });
+    if(!r.ok){
+      let txt=''; try{ txt = await r.text(); }catch{}
+      throw new Error(txt || 'No se pudo eliminar');
+    }
     return r.json();
   }
 
-  async function loadCarreras(){
-    // Intenta /api/carreras; si no existe, prueba /api/academico/carreras (por si ya lo tienes).
-    let resp = await fetch('/api/carreras').catch(()=>null);
-    if(!resp || !resp.ok) resp = await fetch('/api/academico/carreras').catch(()=>null);
-
-    let carreras = [];
-    if(resp && resp.ok){
-      const data = await resp.json();
-      // Acepta { carreras: [...] } o un array directo
-      carreras = Array.isArray(data?.carreras) ? data.carreras : (Array.isArray(data) ? data : []);
+  async function loadCarreras(preselectedId){
+    const sel = $('selCarrera');
+    try{
+      const res = await fetch('/api/cursos/carreras', { credentials:'include' });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const { carreras } = await res.json();
+      if(!Array.isArray(carreras) || carreras.length===0){
+        sel.innerHTML = '<option value="">No hay carreras</option>'; sel.disabled = true; return [];
+      }
+      sel.innerHTML = '<option value="">Seleccione…</option>' + carreras.map(c =>
+        `<option value="${c._id}">${c.nombre}</option>`
+      ).join('');
+      sel.disabled = false;
+      if(preselectedId) sel.value = preselectedId;
+      return carreras;
+    }catch(e){
+      console.error('Error cargando carreras:', e);
+      sel.innerHTML = '<option value="">No se pudieron cargar las carreras</option>'; sel.disabled = true;
+      return [];
     }
-
-    const sel = document.getElementById('selCarrera');
-    sel.innerHTML = '<option value="">Seleccione…</option>' + (carreras||[]).map(c => {
-      // c puede traer { _id, nombre, codigo }. Guardamos el nombre como value (porque el curso guarda string).
-      const nombre = c.nombre || c.name || c.codigo || c._id || '—';
-      return `<option value="${nombre}">${nombre}</option>`;
-    }).join('');
   }
 
-  async function loadProfesores(){
-    // Intenta /api/users?rol=profesor; como fallback intenta /api/admin?rol=profesor
-    let r = await fetch('/api/users?rol=profesor').catch(()=>null);
-    if(!r || !r.ok) r = await fetch('/api/admin?rol=profesor').catch(()=>null);
-
-    let usuarios = [];
-    if(r && r.ok){
-      const data = await r.json();
-      usuarios = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+  async function loadProfesores(carrera_id, preselectedId){
+    const sel = $('selProfesor');
+    if(!carrera_id){
+      sel.innerHTML = '<option value="">Seleccione primero una carrera…</option>'; sel.disabled = true; return [];
     }
-
-    const sel = document.getElementById('selProfesor');
-    sel.innerHTML = '<option value="">Seleccione…</option>' + (usuarios||[]).map(u => {
-      const label = u.nombre || u.correo || u.email || u._id;
-      return `<option value="${u._id}">${label}</option>`;
-    }).join('');
-    return usuarios;
+    try{
+      const r = await fetch(`/api/cursos/profes?carrera_id=${encodeURIComponent(carrera_id)}`, { credentials:'include' });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const { profesores } = await r.json();
+      if(!Array.isArray(profesores) || profesores.length===0){
+        sel.innerHTML = '<option value="">No hay profesores para esta carrera</option>'; sel.disabled = true; return [];
+      }
+      sel.innerHTML = '<option value="">Seleccione…</option>' + profesores.map(p =>
+        `<option value="${p._id}">${p.nombre}${p.carrera ? ' — '+p.carrera : ''}</option>`
+      ).join('');
+      sel.disabled = false;
+      if(preselectedId) sel.value = preselectedId;
+      return profesores;
+    }catch(e){
+      console.error('Error cargando profesores:', e);
+      sel.innerHTML = '<option value="">No se pudieron cargar los profesores</option>'; sel.disabled = true;
+      return [];
+    }
   }
 
   (async ()=>{
@@ -157,79 +188,81 @@
       // Auth + rol admin
       const me = await getMe();
       const user = me.user || {};
-      const rol  = (user.rolNombre || '').toLowerCase();
-      if(rol !== 'administrador'){ window.location.href = '/dashboard'; return; }
+      const rol  = (user.rolNombre||'').toLowerCase();
+      if(rol !== 'administrador'){ location.href='/dashboard'; return; }
 
       // Header
-      const home = '/index-admin.html';
-      document.getElementById('homeLink').href = home;
-      const info = document.getElementById('userInfo'); info.textContent = `${user.nombre} · ${cap(rol)}`; info.style.display = 'inline-flex';
-      const logout = document.getElementById('logoutBtn'); logout.style.display='inline-block';
-      logout.onclick = async ()=>{ try{ await fetch('/api/auth/logout', { method:'POST' }); }catch{} window.location.href='/login.html'; };
+      $('homeLink').href = '/index-admin.html';
+      const info=$('userInfo'); info.textContent=`${user.nombre} · ${cap(rol)}`; info.style.display='inline-flex';
+      const logout=$('logoutBtn'); logout.style.display='inline-block';
+      logout.onclick = async ()=>{ try{ await fetch('/api/auth/logout',{method:'POST',credentials:'include'}); }catch{} location.href='/login.html'; };
 
-      // Carga catálogos
-      await loadCarreras();
-      const profesores = await loadProfesores();
-
-      // Cargar curso
+      // 1) Cargar el curso
       const curso = await getCurso(id);
-      // Rellena campos
-      document.getElementById('inpCodigo').value = curso.codigo || '';
-      document.getElementById('inpNombre').value = curso.nombre || '';
+      // Soportar variantes del backend
+      const cursoNombre     = curso.nombre || '';
+      const cursoCarreraId  = curso.carrera_id || curso.carreraId || null;
+      const cursoCarreraTxt = curso.carrera || curso.carreraNombre || '';
+      const cursoProfesorId = curso.profesor_id || curso.profesorId || null;
+      const cursoProfesorTx = curso.profesor || '';
 
-      // Preseleccionar carrera por nombre (texto)
-      setSelectedByText(document.getElementById('selCarrera'), curso.carrera || '');
-
-      // Preseleccionar profesor:
-      // 1) Si tu endpoint /api/cursos/:id devuelve profesor_id (ideal)
-      if(curso.profesor_id){
-        document.getElementById('selProfesor').value = curso.profesor_id;
-      }else if(curso.profesor){
-        // 2) Fallback: intenta empatar por nombre del profesor
-        setSelectedByText(document.getElementById('selProfesor'), curso.profesor);
+      // 2) Cargar carreras y preseleccionar
+      const carreras = await loadCarreras(cursoCarreraId);
+      if(!cursoCarreraId && cursoCarreraTxt){
+        // si no vino el id, intenta seleccionar por texto
+        setSelectedByText($('selCarrera'), cursoCarreraTxt);
       }
 
-      // Guardar
-      document.getElementById('cursoForm').addEventListener('submit', async (e)=>{
+      // 3) Cargar profesores para la carrera seleccionada y preseleccionar
+      const carreraSeleccionada = $('selCarrera').value;
+      await loadProfesores(carreraSeleccionada, cursoProfesorId);
+      if(!cursoProfesorId && cursoProfesorTx){
+        setSelectedByText($('selProfesor'), cursoProfesorTx);
+      }
+
+      // 4) Rellenar nombre
+      $('inpNombre').value = cursoNombre;
+
+      // 5) Al cambiar carrera, recargar profesores
+      $('selCarrera').addEventListener('change', (e)=>{
+        loadProfesores(e.target.value);
+      });
+
+      // 6) Guardar cambios
+      $('cursoForm').addEventListener('submit', async (e)=>{
         e.preventDefault(); hideAlert();
-
-        const selCarr = document.getElementById('selCarrera');
-        const selProf = document.getElementById('selProfesor');
-
         const payload = {
-          carrera: selCarr.value || (selCarr.options[selCarr.selectedIndex]?.text || '').trim(),
-          codigo:  (document.getElementById('inpCodigo').value || '').trim(),
-          nombre:  (document.getElementById('inpNombre').value || '').trim(),
-          profesor_id: selProf.value || undefined
+          nombre:      ($('inpNombre').value||'').trim(),
+          carrera_id:  $('selCarrera').value,
+          profesor_id: $('selProfesor').value
         };
-
-        if(!payload.carrera || !payload.codigo || !payload.nombre || !payload.profesor_id){
+        if(!payload.nombre || !payload.carrera_id || !payload.profesor_id){
           showAlert('Complete todos los campos obligatorios'); return;
         }
-
         try{
           await updateCurso(id, payload);
-          showAlert('Cambios guardados', 'success');
-          setTimeout(()=>location.href='/cursos.html', 800);
+          showAlert('Cambios guardados','success');
+          setTimeout(()=>location.href='/cursos.html',800);
         }catch(err){
-          showAlert('No se pudo guardar. '+(err.message || err));
+          showAlert(err.message||'No se pudo guardar');
         }
       });
 
-      // Eliminar
-      document.getElementById('btnEliminar').addEventListener('click', async ()=>{
+      // 7) Eliminar curso
+      $('btnEliminar').addEventListener('click', async ()=>{
         if(!confirm('¿Eliminar este curso?')) return;
         try{
           await deleteCurso(id);
-          showAlert('Curso eliminado', 'success');
-          setTimeout(()=>location.href='/cursos.html', 600);
+          showAlert('Curso eliminado','success');
+          setTimeout(()=>location.href='/cursos.html',600);
         }catch(err){
-          showAlert('No se pudo eliminar. '+(err.message || err));
+          showAlert(err.message||'No se pudo eliminar');
         }
       });
 
     }catch(e){
-      window.location.href = '/login.html';
+      console.error(e);
+      location.href='/login.html';
     }
   })();
 </script>
