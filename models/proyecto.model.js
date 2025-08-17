@@ -14,7 +14,6 @@ const ProyectoSchema = new Schema({
   timestamps: false                                 // ya traes fecha_creacion
 });
 
-// Búsqueda por nombre + curso
 ProyectoSchema.index({ nombre: 1 });
 ProyectoSchema.index({ id_curso: 1 });
 

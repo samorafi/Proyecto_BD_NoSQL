@@ -1,304 +1,263 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gestión de Equipos</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css">
-  <style> header{background:#2a73ff;color:white;} </style>
+  <style>
+    header {
+      background: #2a73ff;
+      color: white;
+    }
+  </style>
 </head>
+
 <body class="bg-light">
 
-<header class="d-flex justify-content-between align-items-center p-3">
-  <h1 class="m-0">
-    <a id="homeLink" href="#" class="tituloNav" style="color:white;text-decoration:none;">Gestor Académico</a>
-  </h1>
-  <div class="d-flex align-items-center gap-2">
-    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
-    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
-  </div>
-</header>
-
-<nav>
-  <ul class="menu">
-    <li><a href="/perfil.html">Perfil</a></li>
-    <li><a href="/gestion-academica.html">Gestión Académica</a></li>
-    <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
-    <li><a href="#">Estadísticas</a></li>
-    <li><a href="#">Logs</a></li>
-  </ul>
-</nav>
-
-<main class="container py-4">
-  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-    <h2 class="text-primary m-0">Gestión de Equipos</h2>
-    <div class="d-flex gap-2">
-      <button id="btnCrear" class="btn btn-primary btn-sm" style="display:none;">+ Crear equipo</button>
-      <button id="btnRefrescar" class="btn btn-outline-secondary btn-sm">Actualizar</button>
+  <header class="d-flex justify-content-between align-items-center p-3">
+    <h1 class="m-0">
+      <a id="homeLink" href="#" class="tituloNav" style="color:white;text-decoration:none;">Gestor Académico</a>
+    </h1>
+    <div class="d-flex align-items-center gap-2">
+      <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+      <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
     </div>
-  </div>
+  </header>
 
-  <div id="alertBox" class="alert d-none" role="alert"></div>
+  <nav>
+    <ul class="menu">
+      <li><a href="/perfil.html">Perfil</a></li>
+      <li><a href="/gestion-academica.html">Gestión Académica</a></li>
+      <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
+      <li><a href="#">Estadísticas</a></li>
+      <li><a href="#">Logs</a></li>
+      <li><a href="/admin-usuarios.html" class="selectedNav">Gestión de Usuarios</a></li>
+    </ul>
+  </nav>
 
-  <div class="card shadow-sm">
-    <div class="card-body">
-      <div class="table-responsive">
-        <table class="table table-sm align-middle">
-          <thead>
-            <tr>
-              <th>Equipo</th>
-              <th>Proyecto</th>
-              <th>Miembros</th>
-              <th id="thAcciones" style="width:190px; display:none;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbodyEquipos">
-            <tr><td colspan="4">Cargando…</td></tr>
-          </tbody>
-        </table>
+  <main class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+      <h2 class="text-primary m-0">Gestión de Equipos</h2>
+      <div class="d-flex gap-2">
+        <button id="btnCrear" class="btn btn-primary btn-sm" style="display:none;">+ Crear equipo</button>
+        <button id="btnRefrescar" class="btn btn-outline-secondary btn-sm">Actualizar</button>
       </div>
     </div>
+
+    <div id="alertBox" class="alert d-none" role="alert"></div>
+
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Equipo</th>
+                <th>Proyecto</th>
+                <th>Miembros</th>
+                <th id="thAcciones" style="width:190px; display:none;">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyEquipos">
+              <tr>
+                <td colspan="4">Cargando…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Crear/Editar -->
+  <div class="modal fade" id="modalEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" id="equipoForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Nuevo equipo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalAlert" class="alert d-none" role="alert"></div>
+
+          <input type="hidden" id="equipoId" />
+
+          <div class="mb-3">
+            <label class="form-label">Nombre del equipo</label>
+            <input id="inpNombre" class="form-control" required />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Proyecto</label>
+            <select id="selProyecto" class="form-select" required>
+              <option value="">Cargando…</option>
+            </select>
+          </div>
+
+          <div class="mb-1">
+            <label class="form-label">Miembros (estudiantes)</label>
+            <select id="selMiembros" class="form-select" multiple size="6"></select>
+            <div class="form-text">Mantén presionado Ctrl o Shift para seleccionar múltiples miembros.</div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary">Guardar</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </form>
+    </div>
   </div>
-</main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    crossorigin="anonymous"></script>
 
-<!-- Modal Crear/Editar -->
-<div class="modal fade" id="modalEquipo" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <form class="modal-content" id="equipoForm">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalTitle">Nuevo equipo</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div id="modalAlert" class="alert d-none" role="alert"></div>
+  <script>
+    const $ = id => document.getElementById(id);
+    const cap = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+    function showAlert(msg, type = 'danger') { const b = $('alertBox'); b.textContent = msg; b.className = 'alert alert-' + type; }
+    function hideAlert() { $('alertBox').className = 'alert d-none'; }
+    function showModalAlert(msg, type = 'danger') { const b = $('modalAlert'); b.textContent = msg; b.className = 'alert alert-' + type; }
+    function hideModalAlert() { $('modalAlert').className = 'alert d-none'; }
 
-        <input type="hidden" id="equipoId"/>
+    let modal;
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!window.bootstrap) {
+        console.error('Bootstrap JS no cargado');
+        return;
+      }
+      modal = new bootstrap.Modal(document.getElementById('modalEquipo'));
+    });
 
-        <div class="mb-3">
-          <label class="form-label">Nombre del equipo</label>
-          <input id="inpNombre" class="form-control" required/>
-        </div>
+    // API
+    async function getMe() { const r = await fetch('/api/auth/me', { credentials: 'include' }); if (!r.ok) throw new Error('No autenticado'); return r.json(); }
+    async function getListado() { const r = await fetch('/api/equipos/listado-por-rol', { credentials: 'include' }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function getEquipo(id) { const r = await fetch('/api/equipos/' + encodeURIComponent(id), { credentials: 'include' }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function crearEquipo(payload) { const r = await fetch('/api/equipos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function actualizarEquipo(id, payload) { const r = await fetch('/api/equipos/' + encodeURIComponent(id), { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function eliminarEquipo(id) { const r = await fetch('/api/equipos/' + encodeURIComponent(id), { method: 'DELETE', credentials: 'include' }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function getProyectos() { const r = await fetch('/api/equipos/proyectos', { credentials: 'include' }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
+    async function getCandidatos(q = '') { const r = await fetch('/api/equipos/miembros-candidatos?q=' + encodeURIComponent(q), { credentials: 'include' }); if (!r.ok) throw new Error(await r.text()); return r.json(); }
 
-        <div class="mb-3">
-          <label class="form-label">Proyecto</label>
-          <select id="selProyecto" class="form-select" required>
-            <option value="">Cargando…</option>
-          </select>
-        </div>
+    function renderEquipos(payload) {
+      hideAlert();
+      const { canCreate, canEdit, canDelete, equipos } = payload || {};
+      const tbody = $('tbodyEquipos');
+      const thAcc = $('thAcciones');
+      if (thAcc) thAcc.style.display = (canEdit || canDelete) ? '' : 'none';
+      $('btnCrear').style.display = canCreate ? 'inline-block' : 'none';
 
-        <div class="mb-1">
-          <label class="form-label">Miembros (profesores/estudiantes)</label>
-          <select id="selMiembros" class="form-select" multiple size="6">
-            <!-- se llena con candidatos -->
-          </select>
-          <div class="form-text">Mantén presionado Ctrl o Shift para seleccionar múltiples miembros.</div>
-        </div>
-
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary">Guardar</button>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<script>
-  // ===== Utils =====
-  const $ = id => document.getElementById(id);
-  const cap = s => s ? s.charAt(0).toUpperCase()+s.slice(1) : '';
-
-  function showAlert(msg, type='danger'){ const b=$('alertBox'); b.textContent=msg; b.className='alert alert-'+type; }
-  function hideAlert(){ $('alertBox').className='alert d-none'; }
-  function showModalAlert(msg, type='danger'){ const b=$('modalAlert'); b.textContent=msg; b.className='alert alert-'+type; }
-  function hideModalAlert(){ $('modalAlert').className='alert d-none'; }
-
-  const modal = new bootstrap.Modal('#modalEquipo');
-
-  // ===== API =====
-  async function getMe(){ const r=await fetch('/api/auth/me', {credentials:'include'}); if(!r.ok) throw new Error('No autenticado'); return r.json(); }
-  async function getListado(){ const r=await fetch('/api/equipos/listado-por-rol', {credentials:'include'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-  async function getEquipo(id){ const r=await fetch('/api/equipos/'+encodeURIComponent(id), {credentials:'include'}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
-  async function crearEquipo(payload){
-    const r=await fetch('/api/equipos',{method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
-    if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
-  async function actualizarEquipo(id,payload){
-    const r=await fetch('/api/equipos/'+encodeURIComponent(id),{method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload)});
-    if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
-  async function eliminarEquipo(id){
-    const r=await fetch('/api/equipos/'+encodeURIComponent(id),{method:'DELETE', credentials:'include'});
-    if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
-  async function getProyectos(){
-    const r=await fetch('/api/equipos/proyectos', {credentials:'include'}); if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
-  async function getCandidatos(q=''){
-    const r=await fetch('/api/equipos/miembros-candidatos?q='+encodeURIComponent(q), {credentials:'include'});
-    if(!r.ok) throw new Error(await r.text()); return r.json();
-  }
-
-  // ===== UI =====
-  function renderEquipos(payload){
-    hideAlert();
-    const { canCreate, canEdit, canDelete, equipos } = payload || {};
-    const tbody = $('tbodyEquipos');
-    const thAcc = $('thAcciones');
-    if(thAcc) thAcc.style.display = (canEdit || canDelete) ? '' : 'none';
-    $('btnCrear').style.display = canCreate ? 'inline-block' : 'none';
-
-    if(!Array.isArray(equipos) || equipos.length===0){
-      tbody.innerHTML = `<tr><td colspan="${(canEdit||canDelete)?4:3}" class="text-muted">Sin equipos.</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = equipos.map(eq=>{
-      const miembrosTxt = (eq.miembros||[]).map(m=>m.nombre).join(', ') || '—';
-      const acciones = (canEdit || canDelete) ? `
+      if (!Array.isArray(equipos) || equipos.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${(canEdit || canDelete) ? 4 : 3}" class="text-muted">Sin equipos.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = equipos.map(eq => {
+        const miembrosTxt = (eq.miembros || []).map(m => m.nombre).join(', ') || '—';
+        const acciones = (canEdit || canDelete) ? `
         <td>
           <div class="btn-group btn-group-sm">
-            ${canEdit ? `<button class="btn btn-outline-primary" onclick="editar('${eq.id}')">Editar</button>`:''}
-            ${canDelete ? `<button class="btn btn-outline-danger" onclick="borrar('${eq.id}')">Eliminar</button>`:''}
+            ${canEdit ? `<button class="btn btn-outline-primary" onclick="editar('${eq.id}')">Editar</button>` : ''}
+            ${canDelete ? `<button class="btn btn-outline-danger" onclick="borrar('${eq.id}')">Eliminar</button>` : ''}
           </div>
         </td>` : '';
-      return `
+        return `
         <tr>
-          <td>${eq.nombre||'—'}</td>
-          <td>${eq.proyecto||'—'}</td>
+          <td>${eq.nombre || '—'}</td>
+          <td>${eq.proyecto || '—'}</td>
           <td>${miembrosTxt}</td>
           ${acciones}
         </tr>`;
-    }).join('');
-  }
-
-  async function cargarListado(){
-    $('tbodyEquipos').innerHTML = `<tr><td colspan="4">Cargando…</td></tr>`;
-    try{
-      const data = await getListado();
-      renderEquipos(data);
-    }catch(err){
-      console.error(err);
-      showAlert('No se pudieron cargar los equipos. '+(err.message||err));
-      $('tbodyEquipos').innerHTML = `<tr><td colspan="4" class="text-danger">Error de carga.</td></tr>`;
+      }).join('');
     }
-  }
 
-  async function openModalNuevo(){
-    hideModalAlert();
-    $('modalTitle').textContent = 'Nuevo equipo';
-    $('equipoId').value = '';
-    $('inpNombre').value = '';
-
-    // Cargar catálogos
-    await cargarProyectosEnSelect();
-    await cargarCandidatosEnSelect();
-
-    // Limpiar selección múltiple
-    Array.from($('selMiembros').options).forEach(o=>o.selected=false);
-
-    modal.show();
-  }
-
-  async function openModalEditar(id){
-    hideModalAlert();
-    $('modalTitle').textContent = 'Editar equipo';
-    $('equipoId').value = id;
-
-    await cargarProyectosEnSelect();
-    await cargarCandidatosEnSelect();
-
-    const eq = await getEquipo(id);
-    $('inpNombre').value = eq.nombre || '';
-    $('selProyecto').value = eq.id_proyecto || '';
-
-    // Preseleccionar miembros actuales
-    const currentIds = new Set((eq.miembros||[]).map(m=>String(m._id)));
-    Array.from($('selMiembros').options).forEach(o=> o.selected = currentIds.has(o.value));
-
-    modal.show();
-  }
-
-  async function cargarProyectosEnSelect(){
-    const sel = $('selProyecto');
-    sel.innerHTML = `<option value="">Cargando…</option>`;
-    try{
-      const { proyectos } = await getProyectos();
-      sel.innerHTML = `<option value="">Seleccione…</option>` + (proyectos||[]).map(p=>
-        `<option value="${p._id}">${p.nombre}</option>`
-      ).join('');
-    }catch(err){
-      sel.innerHTML = `<option value="">No se pudieron cargar los proyectos</option>`;
+    async function cargarListado() {
+      $('tbodyEquipos').innerHTML = `<tr><td colspan="4">Cargando…</td></tr>`;
+      try { const data = await getListado(); renderEquipos(data); }
+      catch (err) { console.error(err); showAlert('No se pudieron cargar los equipos. ' + (err.message || err)); $('tbodyEquipos').innerHTML = `<tr><td colspan="4" class="text-danger">Error de carga.</td></tr>`; }
     }
-  }
 
-  async function cargarCandidatosEnSelect(){
-    const sel = $('selMiembros');
-    sel.innerHTML = '';
-    try{
-      const { usuarios } = await getCandidatos('');
-      sel.innerHTML = (usuarios||[]).map(u => `<option value="${u._id}">${u.nombre} — ${u.rolNombre}</option>`).join('');
-    }catch(err){
-      sel.innerHTML = '<option value="">No se pudieron cargar usuarios</option>';
+    async function openModalNuevo() {
+      hideModalAlert();
+      $('modalTitle').textContent = 'Nuevo equipo';
+      $('equipoId').value = ''; $('inpNombre').value = '';
+      await cargarProyectosEnSelect(); await cargarCandidatosEnSelect();
+      Array.from($('selMiembros').options).forEach(o => o.selected = false);
+      modal.show();
     }
-  }
 
-  // Submit del modal
-  $('equipoForm').addEventListener('submit', async (e)=>{
-    e.preventDefault(); hideModalAlert();
-    const id = $('equipoId').value || null;
-    const payload = {
-      nombre: ($('inpNombre').value||'').trim(),
-      id_proyecto: $('selProyecto').value || '',
-      miembros: Array.from($('selMiembros').selectedOptions).map(o=>o.value)
-    };
-    if(!payload.nombre || !payload.id_proyecto){
-      showModalAlert('Complete nombre y proyecto'); return;
+    async function openModalEditar(id) {
+      hideModalAlert();
+      $('modalTitle').textContent = 'Editar equipo';
+      $('equipoId').value = id;
+      await cargarProyectosEnSelect(); await cargarCandidatosEnSelect();
+      const eq = await getEquipo(id);
+      $('inpNombre').value = eq.nombre || ''; $('selProyecto').value = eq.id_proyecto || '';
+      const currentIds = new Set((eq.miembros || []).map(m => String(m._id)));
+      Array.from($('selMiembros').options).forEach(o => o.selected = currentIds.has(o.value));
+      modal.show();
     }
-    try{
-      if(id) await actualizarEquipo(id, payload);
-      else   await crearEquipo(payload);
 
-      modal.hide();
-      await cargarListado();
-    }catch(err){
-      showModalAlert(err.message||'No se pudo guardar');
+    async function cargarProyectosEnSelect() {
+      const sel = $('selProyecto'); sel.innerHTML = `<option value="">Cargando…</option>`;
+      try {
+        const { proyectos } = await getProyectos();
+        sel.innerHTML = `<option value="">Seleccione…</option>` + (proyectos || []).map(p => `<option value="${p._id}">${p.nombre}</option>`).join('');
+      } catch { sel.innerHTML = `<option value="">No se pudieron cargar los proyectos</option>`; }
     }
-  });
 
-  // Acciones globales
-  window.editar = (id)=> openModalEditar(id);
-  window.borrar = async (id)=>{
-    if(!confirm('¿Eliminar este equipo?')) return;
-    try{ await eliminarEquipo(id); await cargarListado(); }
-    catch(err){ showAlert(err.message||'No se pudo eliminar'); }
-  };
-
-  // ===== Bootstrap de la página =====
-  (async ()=>{
-    try{
-      const me = await getMe();
-      const user = me.user || {};
-      const rol  = (user.rolNombre || 'estudiante');
-      const home = rol==='profesor' ? '/index-profesor.html'
-                : rol==='administrador' ? '/index-admin.html'
-                : '/index-estudiante.html';
-
-      $('homeLink').href = home;
-      const info = $('userInfo'); info.textContent = `${user.nombre} · ${cap(rol)}`; info.style.display = 'inline-flex';
-      const logout = $('logoutBtn'); logout.style.display='inline-block';
-      logout.onclick = async ()=>{ try{ await fetch('/api/auth/logout', { method:'POST', credentials:'include' }); }catch{} location.href='/login.html'; };
-
-      $('btnCrear').addEventListener('click', openModalNuevo);
-      $('btnRefrescar').addEventListener('click', cargarListado);
-
-      await cargarListado();
-    }catch(e){
-      location.href='/login.html';
+    async function cargarCandidatosEnSelect() {
+      const sel = $('selMiembros'); sel.innerHTML = '';
+      try {
+        const { usuarios } = await getCandidatos('');
+        sel.innerHTML = (usuarios || []).map(u => `<option value="${u._id}">${u.nombre} — ${u.rolNombre}</option>`).join('');
+      } catch { sel.innerHTML = '<option value="">No se pudieron cargar usuarios</option>'; }
     }
-  })();
-</script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    $('equipoForm').addEventListener('submit', async (e) => {
+      e.preventDefault(); hideModalAlert();
+      const id = $('equipoId').value || null;
+      const payload = {
+        nombre: ($('inpNombre').value || '').trim(),
+        id_proyecto: $('selProyecto').value || '',
+        miembros: Array.from($('selMiembros').selectedOptions).map(o => o.value)
+      };
+      if (!payload.nombre || !payload.id_proyecto) { showModalAlert('Complete nombre y proyecto'); return; }
+      try {
+        if (id) await actualizarEquipo(id, payload);
+        else await crearEquipo(payload);
+        modal.hide(); await cargarListado();
+      } catch (err) { showModalAlert(err.message || 'No se pudo guardar'); }
+    });
+
+    window.editar = (id) => openModalEditar(id);
+    window.borrar = async (id) => { if (!confirm('¿Eliminar este equipo?')) return; try { await eliminarEquipo(id); await cargarListado(); } catch (err) { showAlert(err.message || 'No se pudo eliminar'); } };
+
+    (async () => {
+      try {
+        const me = await getMe();
+        const user = me.user || {};
+        const rol = (user.rolNombre || 'estudiante');
+        const home = rol === 'profesor' ? '/index-profesor.html'
+          : rol === 'administrador' ? '/index-admin.html'
+            : '/index-estudiante.html';
+        $('homeLink').href = home;
+        const info = $('userInfo'); info.textContent = `${user.nombre} · ${cap(rol)}`; info.style.display = 'inline-flex';
+        const logout = $('logoutBtn'); logout.style.display = 'inline-block';
+        logout.onclick = async () => { try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }); } catch { } location.href = '/login.html'; };
+
+        $('btnCrear').addEventListener('click', openModalNuevo);
+        $('btnRefrescar').addEventListener('click', cargarListado);
+
+        await cargarListado();
+      } catch { location.href = '/login.html'; }
+    })();
+  </script>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/auth-ui.js"></script>
+  <script> AuthUI.initHeader({ protect: true }); </script>
 </body>
+
 </html>

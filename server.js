@@ -34,6 +34,14 @@ app.get('/perfil.html', auth(true), (req, res) => {
 const adminUsersRoutes = require('./routes/admin.users.routes');
 app.use('/api/admin', adminUsersRoutes);
 
+const equiposRoutes = require('./routes/equipo.routes');
+app.use('/api/equipos', equiposRoutes);
+
+// Vista de equipos
+app.get('/equipos.html', auth(true), (req, res) => {
+  res.sendFile(path.join(__dirname, 'view', 'equipos.html'));
+});
+
 
 app.get('/admin-usuarios.html', auth(true), (req, res) => {
   if ((req.user?.rolNombre || '').toLowerCase() !== 'administrador') {
@@ -97,8 +105,6 @@ app.get('/register.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'register.html'));
 });
 
-const equipoRoutes = require('./routes/equipo.routes');
-app.use('/api/equipos', equipoRoutes);
 // ===== Server =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
