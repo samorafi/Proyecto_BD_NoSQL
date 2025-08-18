@@ -24,6 +24,8 @@ const tareasRoutes = require('./routes/tareas.routes');
 const authRoutes = require('./routes/auth.routes');
 const logsRoutes = require('./routes/logs.routes');
 const estadisticasRoutes = require('./routes/estadisticas.routes');
+const EtiquetasRoutes = require('./routes/etiquetas.routes');
+app.use('/api/etiquetas', EtiquetasRoutes);
 app.use('/api/estadisticas', estadisticasRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/tareas', tareasRoutes);

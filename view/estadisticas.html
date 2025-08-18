@@ -53,6 +53,7 @@
                 <th>Comentarios Realizados</th>
                 <th>Archivos Subidos</th>
                 <th>Ultima Actividad</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="estadisticas-table"></tbody>
@@ -86,7 +87,26 @@
               <button class="btn btn-sm btn-danger">Eliminar</button>
             </td>
           `;
+          //Para el boton de eliminar
+          const deleteBtn = tr.querySelector(".btn-danger");
+          deleteBtn.addEventListener("click", async () => {
+            if (!confirm("¿Seguro que quieres eliminar esta estadística?")) return;
 
+            try {
+              const res = await fetch(`/api/estadisticas/${estadisticas._id}`, {
+                method: "DELETE"
+              });
+
+              if (res.ok) {
+                tr.remove();
+              } else {
+                alert("Error al eliminar");
+              }
+            } catch (err) {
+              console.error("Error eliminando:", err);
+              alert("Error de conexión al eliminar");
+            }
+          });
           tbody.appendChild(tr);
         });
       } catch (error) {

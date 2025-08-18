@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Listado de Logs</title>
+  <title>Etiquetas</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -27,7 +27,7 @@
       <li><a href="gestion-academica.html">Gestión Académica</a></li>
       <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
       <li><a href="estadisticas.html">Estadísticas</a></li>
-      <li><a href="logs.html" class="selectedNav">Logs</a></li>
+      <li><a href="logs.html">Logs</a></li>
       <li class="role-only" data-roles="administrador" style="display:none;">
         <a href="/admin-usuarios.html">Gestión de Usuarios</a>
       </li>
@@ -37,7 +37,7 @@
   <!-- Main -->
   <main class="container py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-      <h2 class="text-primary m-0">Logs</h2>
+      <h2 class="text-primary m-0">Etiquetas</h2>
     </div>
 
     <div id="alertBox" class="alert alert-danger d-none" role="alert"></div>
@@ -49,14 +49,12 @@
             <thead>
               <tr>
                 <th>id</th>
-                <th>Acción</th>
-                <th>Usuario</th>
-                <th style="width:240px">Detalle</th>
-                <th>Fecha</th>
+                <th>Nombre</th>
+                <th>Color</th>
                 <th id="thAcciones" style="width:170px;">Acciones</th>
               </tr>
             </thead>
-            <tbody id="logs-table"></tbody>
+            <tbody id="etiquetas-table"></tbody>
           </table>
         </div>
       </div>
@@ -66,23 +64,21 @@
   <!-- Script -->
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
-      const tbody = document.getElementById("logs-table");
+      const tbody = document.getElementById("etiquetas-table");
 
       try {
-        const res = await fetch("/api/logs");
-        const logs = await res.json();
+        const res = await fetch("/api/etiquetas");
+        const etiquetas = await res.json();
 
         tbody.innerHTML = "";
 
-        logs.forEach(log => {
+        etiquetas.forEach(etiqueta => {
           const tr = document.createElement("tr");
 
           tr.innerHTML = `
-            <td>${log._id}</td>
-            <td>${log.accion}</td>
-            <td>${log.usuario || "N/A"}</td>
-            <td>${log.detalle || ""}</td>
-            <td>${new Date(log.fecha).toLocaleString()}</td>
+            <td>${etiqueta._id}</td>
+            <td>${etiqueta.nombre || ""}</td>
+            <td>${etiqueta.color || ""}</td>
             <td>
               <button class="btn btn-sm btn-danger">Eliminar</button>
             </td>
@@ -93,7 +89,7 @@
             if (!confirm("¿Seguro que quieres eliminar esta estadística?")) return;
 
             try {
-              const res = await fetch(`/api/logs/${log._id}`, {
+              const res = await fetch(`/api/etiquetas/${etiqueta._id}`, {
                 method: "DELETE"
               });
 
@@ -107,13 +103,12 @@
               alert("Error de conexión al eliminar");
             }
           });
-
           tbody.appendChild(tr);
         });
       } catch (error) {
-        console.error("Error cargando logs:", error);
+        console.error("Error cargando etiquetas:", error);
         document.getElementById("alertBox").classList.remove("d-none");
-        document.getElementById("alertBox").textContent = "No se pudieron cargar los logs";
+        document.getElementById("alertBox").textContent = "No se pudieron cargar los etiquetas";
       }
     });
   </script>

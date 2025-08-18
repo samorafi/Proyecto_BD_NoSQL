@@ -21,4 +21,13 @@ const getEstadisticasApi = async (req, res) => {
   }
 };
 
-module.exports = { getEstadisticasApi };
+const deleteEstadisticaApi = async (req, res) => {
+  try {
+    await Estadistica.findByIdAndDelete(req.params.id);
+    res.json({ message: "Estadística eliminada correctamente" });
+  } catch (error) {
+    res.status(500).json({ error: "Error al eliminar estadística" });
+  }
+};
+
+module.exports = { getEstadisticasApi, deleteEstadisticaApi };
