@@ -19,7 +19,7 @@
 <label for="contenido" class="form-label">Nuevo Comentario</label>
 <textarea id="contenido" class="form-control" required></textarea>
 </div>
-<input type="hidden" id="autor" value="u001" />
+<!-- <input type="hidden" id="autor" value="u001" /> -->
 <button type="submit" class="btn btn-primary">Agregar comentario</button>
 </form>
  
@@ -31,7 +31,7 @@
 $(document).ready(function () {
   const params = new URLSearchParams(window.location.search);
   const tareaId = params.get("id");
-  const idAutor = $("#autor").val();
+  const idAutor = $("#_id").val();
 
   function cargarTarea() {
     $.get(`/api/tareas/${tareaId}`, function (data) {
@@ -88,20 +88,21 @@ $(document).ready(function () {
     e.preventDefault();
     const contenido = $("#contenido").val();
 
-    $.ajax({
-      url: `/api/tareas/${tareaId}/comentario`,
-      method: "POST",
-      contentType: "application/json",
-      data: JSON.stringify({ autor: idAutor, contenido }),
-      success: function () {
-        $("#mensaje").html(`<div class="alert alert-success">Comentario agregado</div>`);
-        $("#contenido").val('');
-        cargarComentarios();
-      },
-      error: function () {
-        $("#mensaje").html(`<div class="alert alert-danger">Error al comentar</div>`);
-      }
-    });
+   $.ajax({
+  url: `/api/tareas/${tareaId}/comentario`,
+  method: "POST",
+  contentType: "application/json",
+  data: JSON.stringify({ contenido }), // solo enviamos contenido
+  success: function () {
+    $("#mensaje").html(`<div class="alert alert-success">Comentario agregado</div>`);
+    $("#contenido").val('');
+    cargarComentarios();
+  },
+  error: function () {
+    $("#mensaje").html(`<div class="alert alert-danger">Error al comentar</div>`);
+  }
+});
+
   });
 
   cargarTarea();

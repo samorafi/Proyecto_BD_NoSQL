@@ -34,12 +34,11 @@ const crearTarea = async (req, res) => {
   }
 };
 
+// GET /api/tareas/usuario/:id
 const obtenerTareasPorUsuario = async (req, res) => {
   try {
     const usuarioId = req.params.id;
-
     const tareas = await Tarea.find({ responsables: usuarioId });
-
     res.status(200).json({ tareas });
   } catch (error) {
     console.error('Error al obtener tareas por usuario:', error);
@@ -47,10 +46,10 @@ const obtenerTareasPorUsuario = async (req, res) => {
   }
 };
 
+// GET /api/tareas/:id
 const obtenerTareaPorId = async (req, res) => {
   try {
     const tareaId = req.params.id;
-
     const tarea = await Tarea.findById(tareaId);
 
     if (!tarea) {
@@ -64,12 +63,12 @@ const obtenerTareaPorId = async (req, res) => {
   }
 };
 
+// PATCH /api/tareas/:id/estado
 const actualizarEstadoTarea = async (req, res) => {
   try {
     const tareaId = req.params.id;
     const { nuevoEstado } = req.body;
 
-    // Validar el nuevo estado
     const estadosValidos = ['pendiente', 'en_proceso', 'finalizada'];
     if (!estadosValidos.includes(nuevoEstado)) {
       return res.status(400).json({ mensaje: 'Estado no válido' });
@@ -92,6 +91,7 @@ const actualizarEstadoTarea = async (req, res) => {
   }
 };
 
+// PATCH /api/tareas/:id
 const editarTarea = async (req, res) => {
   try {
     const tareaId = req.params.id;
@@ -115,8 +115,8 @@ const editarTarea = async (req, res) => {
 
     const tareaActualizada = await Tarea.findByIdAndUpdate(
       tareaId,
-      camposActualizados,
-      { new: true }
+      { $set: camposActualizados },
+      { new: true, runValidators: true }
     );
 
     if (!tareaActualizada) {
@@ -134,12 +134,18 @@ const editarTarea = async (req, res) => {
 const agregarComentario = async (req, res) => {
   try {
     const tareaId = req.params.id;
-    const { autor, contenido } = req.body;
+    const autor = req.user._id; // <-- Cambiado de autorId a autor
+    const { contenido } = req.body;
+
+    if (!autor || !contenido) {
+      return res.status(400).json({ mensaje: 'Autor y contenido son obligatorios.' });
+    }
 
     const nuevoComentario = new Comentario({
       id_tarea: tareaId,
-      autor,
-      contenido
+      autor, // <-- ¡Ahora el nombre coincide con el del esquema!
+      contenido,
+      fecha: new Date()
     });
 
     const comentarioGuardado = await nuevoComentario.save();
@@ -154,20 +160,17 @@ const agregarComentario = async (req, res) => {
   }
 };
 
+// GET /api/tareas?estado&etiqueta&responsable
 const filtrarTareas = async (req, res) => {
   try {
     const { estado, etiqueta, responsable } = req.query;
 
     const filtro = {};
-
     if (estado) filtro.estado = estado;
-
     if (etiqueta) filtro.etiquetas = etiqueta;
-
     if (responsable) filtro.responsables = responsable;
 
     const tareas = await Tarea.find(filtro);
-
     res.status(200).json({ tareas });
   } catch (error) {
     console.error('Error al filtrar tareas:', error);
@@ -175,6 +178,7 @@ const filtrarTareas = async (req, res) => {
   }
 };
 
+// GET /api/tareas/extras/etiquetas
 const obtenerEtiquetas = async (req, res) => {
   try {
     const etiquetas = await Etiqueta.find({});
@@ -185,9 +189,10 @@ const obtenerEtiquetas = async (req, res) => {
   }
 };
 
+// GET /api/tareas/extras/usuarios
 const obtenerUsuarios = async (req, res) => {
   try {
-    const usuarios = await Usuario.find({ activo: 'true' }).select('_id nombre rol');
+    const usuarios = await Usuario.find({ activo: true }).select('_id nombre rol_id');
     res.status(200).json({ usuarios });
   } catch (error) {
     console.error('Error al obtener usuarios:', error);
@@ -195,9 +200,12 @@ const obtenerUsuarios = async (req, res) => {
   }
 };
 
+// GET /api/tareas/:id/comentarios
 const obtenerComentariosPorTarea = async (req, res) => {
   try {
-    const comentarios = await Comentario.find({ id_tarea: req.params.id }).sort({ fecha: -1 });
+    const comentarios = await Comentario.find({ id_tarea: req.params.id })
+  .sort({ fecha: -1 })
+  .populate({ path: '_id', select: 'nombre rol' });
     res.status(200).json({ comentarios });
   } catch (error) {
     console.error('Error al obtener comentarios:', error);
@@ -209,7 +217,6 @@ const obtenerComentariosPorTarea = async (req, res) => {
 const eliminarTarea = async (req, res) => {
   try {
     const tareaId = req.params.id;
-
     const tareaEliminada = await Tarea.findByIdAndDelete(tareaId);
 
     if (!tareaEliminada) {
@@ -227,7 +234,6 @@ const eliminarTarea = async (req, res) => {
 const eliminarComentario = async (req, res) => {
   try {
     const comentarioId = req.params.id;
-
     const eliminado = await Comentario.findByIdAndDelete(comentarioId);
 
     if (!eliminado) {
@@ -240,7 +246,6 @@ const eliminarComentario = async (req, res) => {
     res.status(500).json({ mensaje: 'Error al eliminar el comentario' });
   }
 };
-
 
 module.exports = {
   crearTarea,

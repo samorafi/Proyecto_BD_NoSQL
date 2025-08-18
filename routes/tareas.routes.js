@@ -57,13 +57,15 @@ router.get('/', tareasController.filtrarTareas);
 router.get('/:id', participantOrElevated, tareasController.obtenerTareaPorId);
 
 // Actualizar estado de una tarea (participante o rol elevado)
-router.patch('/:id/estado', participantOrElevated, tareasController.actualizarEstadoTarea);
+router.patch('/:id/estado', tareasController.actualizarEstadoTarea);
 
 // Editar tarea (fecha, prioridad, etc.) (participante o rol elevado)
-router.patch('/:id', participantOrElevated, tareasController.editarTarea);
+router.patch('/:id', tareasController.editarTarea);
 
 // Agregar comentario (participante o rol elevado)
-router.post('/:id/comentario', participantOrElevated, tareasController.agregarComentario);
+router.post('/:id/comentario', auth(true), tareasController.agregarComentario);
+router.get('/comentarios/tarea/:id', auth(true), tareasController.obtenerComentariosPorTarea);
+
 
 // Obtener detalle de tarea con comentario (participante o rol elevado)
 router.get('/comentarios/tarea/:id', participantOrElevated, tareasController.obtenerComentariosPorTarea);
