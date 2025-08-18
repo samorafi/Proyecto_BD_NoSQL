@@ -402,3 +402,322 @@ db.carreras.insertMany([
   { nombre: "Programación" },
   { nombre: "Ingeniería en Sistemas" }
 ])
+
+//inserts variados
+
+db.usuarios.insertMany([
+    {
+        "_id": "u006",
+        "nombre": "Sofia Castro",
+        "correo": "sofiac@gmail.com",
+        "rol_id": "r001",
+        "activo": true,
+        "carrera": "Programación"
+    },
+    {
+        "_id": "u007",
+        "nombre": "Luis Lopez",
+        "correo": "luisl@gmail.com",
+        "rol_id": "r002",
+        "activo": true,
+        "carrera": "Ingeniería en Sistemas"
+    },
+    {
+        "_id": "u008",
+        "nombre": "Ana Perez",
+        "correo": "anap@gmail.com",
+        "rol_id": "r001",
+        "activo": true,
+        "carrera": "Ingeniería en Sistemas"
+    },
+    {
+        "_id": "u009",
+        "nombre": "Javier Morales",
+        "correo": "javierm@gmail.com",
+        "rol_id": "r001",
+        "activo": true,
+        "carrera": "Programación"
+    },
+    {
+        "_id": "u010",
+        "nombre": "Mariana Ruiz",
+        "correo": "marianar@gmail.com",
+        "rol_id": "r002",
+        "activo": true,
+        "carrera": "Ingeniería en Sistemas"
+    }
+]);
+
+db.cursos.insertMany([
+    {
+        "_id": "c006",
+        "nombre": "Arquitectura de Software",
+        "codigo": "CUR-006",
+        "profesor_id": "u007",
+        "carrera": "Ingeniería en Sistemas"
+    },
+    {
+        "_id": "c007",
+        "nombre": "Sistemas Operativos",
+        "codigo": "CUR-007",
+        "profesor_id": "u010",
+        "carrera": "Programación"
+    },
+    {
+        "_id": "c008",
+        "nombre": "Algoritmos y Estructuras de Datos",
+        "codigo": "CUR-008",
+        "profesor_id": "u007",
+        "carrera": "Ingeniería en Sistemas"
+    }
+]);
+
+db.proyectos.insertMany([
+    {
+        "_id": "p005",
+        "nombre": "App de Asistencia para Estudiantes",
+        "descripcion": "Aplicación móvil para que los estudiantes registren su asistencia en clases y eventos.",
+        "fecha_creacion": "2025-07-10T00:00:00Z",
+        "id_curso": "c006",
+        "estado": "activo"
+    },
+    {
+        "_id": "p006",
+        "nombre": "Biblioteca Virtual",
+        "descripcion": "Sistema de gestión de libros y recursos digitales de la biblioteca universitaria.",
+        "fecha_creacion": "2025-07-15T00:00:00Z",
+        "id_curso": "c007",
+        "estado": "activo"
+    },
+    {
+        "_id": "p007",
+        "nombre": "Sistema de Puntos para Gamificación",
+        "descripcion": "Implementación de un sistema de puntos y logros para motivar la participación en un curso.",
+        "fecha_creacion": "2025-07-20T00:00:00Z",
+        "id_curso": "c008",
+        "estado": "activo"
+    }
+]);
+
+db.tareas.insertMany([
+    {
+        "_id": "t005",
+        "titulo": "Implementar autenticación de usuarios",
+        "descripcion": "Desarrollar la funcionalidad de registro y login para la aplicación de asistencia.",
+        "id_proyecto": "p005",
+        "responsables": ["u006", "u008"],
+        "fecha_limite": "2025-08-20T00:00:00Z",
+        "prioridad": "alta",
+        "estado": "en_progreso",
+        "etiquetas": ["et001", "et004"]
+    },
+    {
+        "_id": "t006",
+        "titulo": "Diseñar base de datos para la biblioteca",
+        "descripcion": "Modelar la estructura de la base de datos para almacenar libros, usuarios y préstamos.",
+        "id_proyecto": "p006",
+        "responsables": ["u009"],
+        "fecha_limite": "2025-08-25T00:00:00Z",
+        "prioridad": "media",
+        "estado": "pendiente",
+        "etiquetas": ["et003"]
+    },
+    {
+        "_id": "t007",
+        "titulo": "Desarrollar API para la gestión de puntos",
+        "descripcion": "Crear los endpoints necesarios para otorgar y consultar los puntos de los usuarios.",
+        "id_proyecto": "p007",
+        "responsables": ["u006", "u008"],
+        "fecha_limite": "2025-09-01T00:00:00Z",
+        "prioridad": "alta",
+        "estado": "en_progreso",
+        "etiquetas": ["et001"]
+    }
+]);
+
+db.comentarios.insertMany([
+    {
+        "_id": "cmt005",
+        "id_tarea": "t005",
+        "autor": "u006",
+        "contenido": "Revisé la lógica de autenticación y parece que hay un error en la validación del correo.",
+        "fecha": "2025-07-22T00:00:00Z"
+    },
+    {
+        "_id": "cmt006",
+        "id_tarea": "t006",
+        "autor": "u009",
+        "contenido": "Necesitamos definir los campos para los metadatos de los libros, como autor, año, etc.",
+        "fecha": "2025-07-28T00:00:00Z"
+    },
+    {
+        "_id": "cmt007",
+        "id_tarea": "t007",
+        "autor": "u007",
+        "contenido": "Les sugiero usar un sistema de caché para optimizar la consulta de puntos.",
+        "fecha": "2025-07-30T00:00:00Z"
+    },
+    {
+        "_id": "cmt008",
+        "id_tarea": "t007",
+        "autor": "u006",
+        "contenido": "¡Excelente sugerencia, Luis! La implementaremos.",
+        "fecha": "2025-07-31T00:00:00Z"
+    }
+]);
+
+db.archivos.insertMany([
+    {
+        "_id": "ar003",
+        "nombre_archivo": "esquema_auth.png",
+        "url": " ",
+        "tipo": "png",
+        "subido_por": "u008",
+        "id_tarea": "t005",
+        "fecha_subida": "2025-07-25T00:00:00Z"
+    },
+    {
+        "_id": "ar004",
+        "nombre_archivo": "modelo_bd_biblioteca.pdf",
+        "url": " ",
+        "tipo": "pdf",
+        "subido_por": "u009",
+        "id_tarea": "t006",
+        "fecha_subida": "2025-07-29T00:00:00Z"
+    }
+]);
+
+db.equipos.insertMany([
+    {
+        "_id": "eq003",
+        "nombre": "Equipo de Asistencia",
+        "id_proyecto": "p005",
+        "miembros": [
+            "u006",
+            "u008"
+        ]
+    },
+    {
+        "_id": "eq004",
+        "nombre": "Equipo de Biblioteca",
+        "id_proyecto": "p006",
+        "miembros": [
+            "u009"
+        ]
+    },
+    {
+        "_id": "eq005",
+        "nombre": "Equipo de Gamificación",
+        "id_proyecto": "p007",
+        "miembros": [
+            "u006",
+            "u008"
+        ]
+    }
+]);
+
+db.notificaciones.insertMany([
+    {
+        "_id": "n003",
+        "usuario_id": "u006",
+        "mensaje": "Se te ha asignado una nueva tarea: 'Implementar autenticación de usuarios'.",
+        "leida": false,
+        "fecha": "2025-07-20T00:00:00Z"
+    },
+    {
+        "_id": "n004",
+        "usuario_id": "u009",
+        "mensaje": "Se ha subido un nuevo archivo en la tarea 'Diseñar base de datos para la biblioteca'.",
+        "leida": false,
+        "fecha": "2025-07-29T00:00:00Z"
+    },
+    {
+        "_id": "n005",
+        "usuario_id": "u007",
+        "mensaje": "Han comentado en una tarea de tu proyecto 'Sistema de Puntos'.",
+        "leida": false,
+        "fecha": "2025-07-30T00:00:00Z"
+    }
+]);
+
+db.logs.insertMany([
+    {
+        "_id": "log003",
+        "accion": "crear_tarea",
+        "usuario": "u007",
+        "detalle": "Creó la tarea 'Implementar autenticación de usuarios' en el proyecto 'p005'.",
+        "fecha": "2025-07-20T00:00:00Z"
+    },
+    {
+        "_id": "log004",
+        "accion": "comentar",
+        "usuario": "u006",
+        "detalle": "Comentó en la tarea 't005'.",
+        "fecha": "2025-07-22T00:00:00Z"
+    },
+    {
+        "_id": "log005",
+        "accion": "subir_archivo",
+        "usuario": "u008",
+        "detalle": "Subió el archivo 'esquema_auth.png' a la tarea 't005'.",
+        "fecha": "2025-07-25T00:00:00Z"
+    }
+]);
+
+db.etiquetas.insertMany([
+    {
+        "_id": "et006",
+        "nombre": "backend",
+        "color": "#FF5733" // naranja
+    },
+    {
+        "_id": "et007",
+        "nombre": "frontend",
+        "color": "#33FF57" // verde lima
+    },
+    {
+        "_id": "et008",
+        "nombre": "base_de_datos",
+        "color": "#3357FF" // azul brillante
+    }
+]);
+
+db.estadisticas.insertMany([
+    {
+        "_id": "stat003",
+        "usuario_id": "u006",
+        "tareas_creadas": 1,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 2,
+        "archivos_subidos": 0,
+        "ultima_actividad": "2025-07-31T00:00:00Z"
+    },
+    {
+        "_id": "stat004",
+        "usuario_id": "u007",
+        "tareas_creadas": 2,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 1,
+        "archivos_subidos": 0,
+        "ultima_actividad": "2025-07-30T00:00:00Z"
+    },
+    {
+        "_id": "stat005",
+        "usuario_id": "u008",
+        "tareas_creadas": 0,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 0,
+        "archivos_subidos": 1,
+        "ultima_actividad": "2025-07-25T00:00:00Z"
+    },
+    {
+        "_id": "stat006",
+        "usuario_id": "u009",
+        "tareas_creadas": 1,
+        "tareas_completadas": 0,
+        "comentarios_realizados": 1,
+        "archivos_subidos": 1,
+        "ultima_actividad": "2025-07-29T00:00:00Z"
+    }
+]);
+
