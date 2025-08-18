@@ -54,9 +54,6 @@ app.get('/admin-usuarios.html', auth(true), (req, res) => {
 const cursosRoutes = require('./routes/cursos.routes');
 app.use('/api/cursos', cursosRoutes);
 
-//const equiposRoutes = require('./routes/equipo.routes');
-//app.use('/api/equipos', equiposRoutes);
-
 
 app.get('/cursos.html', auth(true), (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'cursos.html'));
@@ -69,10 +66,29 @@ app.get('/crear-curso.html', auth(true), (req, res) => {
   res.sendFile(path.join(__dirname, 'view', 'crear-curso.html'));
 });
 
+app.get('/proyecto-detalle.html', auth(true), (req, res) => {
+  res.sendFile(path.join(__dirname, 'view', 'proyecto-detalle.html'));
+});
+
+app.get('/proyectos/:id', auth(true), (req, res) => {
+  res.sendFile(path.join(__dirname, 'view', 'proyecto-detalle.html'));
+});
+
+const proyectosRoutes = require('./routes/proyecto.routes');
+app.use('/api/proyectos', proyectosRoutes);
+
+app.get('/proyectos.html', auth(true), (req, res) => {
+  res.sendFile(path.join(__dirname, 'view', 'proyectos.html'));
+});
+
+app.get('/proyectos/:id', auth(true), (req,res)=>{
+  res.sendFile(path.join(__dirname,'view','proyecto-detalle.html'));
+});
+
 app.get('/editar-curso.html', auth(true), (req,res)=>res.sendFile(path.join(__dirname,'view','editar-curso.html')));
 
 
-// ===== Archivos estáticos SIN index automático =====
+
 app.use(express.static(path.join(__dirname, 'view'), { index: false }));
 
 // ===== Raíz: redirige a login o dashboard según sesión =====

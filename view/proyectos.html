@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Proyectos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body class="bg-light">
+
+<header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff;color:white;">
+  <h1 class="m-0">
+    <a id="homeLink" href="/" class="tituloNav" style="color:white;text-decoration:none;">Gestor Académico</a>
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    <span id="userInfo" class="badge rounded-pill bg-light text-dark" style="display:none;"></span>
+    <button id="logoutBtn" class="btn btn-light btn-sm" style="display:none;">Salir</button>
+  </div>
+</header>
+
+<nav>
+  <ul class="menu">
+    <li><a href="/perfil.html">Perfil</a></li>
+    <li><a href="/gestion-academica.html" class="selectedNav">Gestión Académica</a></li>
+    <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
+    <li><a href="#">Estadísticas</a></li>
+    <li><a href="#">Logs</a></li>
+    <li class="role-only" data-roles="administrador" style="display:none;"><a href="/admin-usuarios.html">Gestión de Usuarios</a>
+  </ul>
+</nav>
+
+<main class="container py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="text-primary m-0">Proyectos</h2>
+    <button id="btnNuevo" class="btn btn-primary btn-sm" style="display:none;">+ Nuevo</button>
+  </div>
+
+  <div id="alertBox" class="alert d-none" role="alert"></div>
+
+  <div class="card shadow-sm">
+    <div class="card-body p-0">
+      <table class="table table-hover m-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:110px; color: black;">Código</th>
+            <th>Nombre</th>
+            <th>Curso</th>
+            <th class="text-center" style="width:110px;">Equipos</th>
+            <th class="text-center" style="width:110px;">Miembros</th>
+            <th style="width:170px;"></th>
+          </tr>
+        </thead>
+        <tbody id="tbodyProys">
+          <tr><td colspan="6" class="text-center text-muted">Cargando…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- Modal crear/editar -->
+<div class="modal fade" id="modalProyecto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="formProyecto">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Nuevo proyecto</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <div id="mAlert" class="alert d-none" role="alert"></div>
+
+          <div class="mb-2">
+            <label class="form-label">Nombre</label>
+            <input id="inpNombre" class="form-control" required/>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Curso</label>
+            <select id="selCurso" class="form-select" required></select>
+          </div>
+
+          <div class="mb-2">
+            <label class="form-label">Estado</label>
+            <select id="selEstado" class="form-select">
+              <option value="activo">Activo</option>
+              <option value="en_progreso">En progreso</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label">Descripción</label>
+            <textarea id="inpDesc" class="form-control" rows="3"></textarea>
+          </div>
+
+          <input type="hidden" id="hidId"/>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function cap(s){return s? s.charAt(0).toUpperCase()+s.slice(1):'';}
+  function showAlert(msg,type='danger'){const a=document.getElementById('alertBox');a.textContent=msg;a.className='alert alert-'+type;}
+  function hideAlert(){document.getElementById('alertBox').className='alert d-none';}
+  function mShow(msg,type='danger'){const a=document.getElementById('mAlert');a.textContent=msg;a.className='alert alert-'+type;}
+  function mHide(){document.getElementById('mAlert').className='alert d-none';}
+
+  let modal;
+
+  async function getMe(){
+    const r=await fetch('/api/auth/me',{credentials:'include'}); if(!r.ok) throw new Error('No autenticado'); return r.json();
+  }
+  async function fetchListado(){
+    const r=await fetch('/api/proyectos/listado-por-rol',{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+  }
+  async function fetchCursos(){
+    const r=await fetch('/api/proyectos/cursos',{credentials:'include'}); if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+  }
+  async function createProyecto(payload){
+    const r=await fetch('/api/proyectos',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error(await r.text()); return r.json();
+  }
+  async function updateProyecto(id,payload){
+    const r=await fetch('/api/proyectos/'+encodeURIComponent(id),{method:'PUT',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error(await r.text()); return r.json();
+  }
+  async function deleteProyecto(id){
+    const r=await fetch('/api/proyectos/'+encodeURIComponent(id),{method:'DELETE',credentials:'include'});
+    if(!r.ok) throw new Error(await r.text()); return r.json();
+  }
+
+  function renderTabla(data){
+    const tb=document.getElementById('tbodyProys');
+    if(!data.proyectos?.length){
+      tb.innerHTML='<tr><td colspan="6" class="text-center text-muted">Sin proyectos</td></tr>'; return;
+    }
+    const canEdit=data.canEdit, canDelete=data.canDelete;
+    tb.innerHTML=data.proyectos.map(p=>{
+      const cursoTxt = p.curso ? `${p.curso.nombre} (${p.curso.codigo||''})` : '—';
+      const acciones = (canEdit||canDelete)
+        ? `<div class="btn-group btn-group-sm">
+             ${canEdit? `<button class="btn btn-outline-primary" data-act="edit" data-id="${p._id}">Editar</button>`:''}
+             ${canDelete? `<button class="btn btn-outline-danger" data-act="del" data-id="${p._id}">Eliminar</button>`:''}
+             <a class="btn btn-outline-secondary" href="/proyecto-detalle.html?id=${p._id}">Ver</a>
+           </div>`
+        : `<a class="btn btn-outline-secondary btn-sm" href="/proyecto-detalle.html?id=${p._id}">Ver</a>`;
+      return `<tr>
+        <td><code>${p._id}</code></td>
+        <td>${p.nombre||'—'}</td>
+        <td>${cursoTxt}</td>
+        <td class="text-center">${p.equiposCount||0}</td>
+        <td class="text-center">${p.miembrosCount||0}</td>
+        <td>${acciones}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function load(){
+    hideAlert();
+    try{
+      const me=await getMe();
+      const user=me.user||{}; const rol=(user.rolNombre||'estudiante').toLowerCase();
+      const home = rol==='administrador'?'/index-admin.html': rol==='profesor'?'/index-profesor.html':'/index-estudiante.html';
+      document.getElementById('homeLink').href=home;
+      const info=document.getElementById('userInfo'); info.textContent=`${user.nombre} · ${cap(rol)}`; info.style.display='inline-flex';
+      const lo=document.getElementById('logoutBtn'); lo.style.display='inline-block'; lo.onclick=async()=>{try{await fetch('/api/auth/logout',{method:'POST',credentials:'include'})}catch{} location.href='/login.html';};
+
+      const data=await fetchListado();
+      renderTabla(data);
+
+      // botón nuevo
+      const btnNuevo=document.getElementById('btnNuevo');
+      if (data.canCreate){ btnNuevo.style.display='inline-block'; } else { btnNuevo.style.display='none'; }
+
+      // eventos de acciones
+      document.getElementById('tbodyProys').onclick=async (e)=>{
+        const btn=e.target.closest('button[data-act]'); if(!btn) return;
+        const id=btn.getAttribute('data-id'); const act=btn.getAttribute('data-act');
+        if(act==='del'){
+          if(!confirm('¿Eliminar este proyecto?')) return;
+          try{ await deleteProyecto(id); await load(); }catch(err){ showAlert('No se pudo eliminar'); }
+        } else if(act==='edit'){
+          mHide();
+          // precargar cursos y datos del proyecto
+          try{
+            await loadCursosDropdown();
+            // obtener detalle para llenar modal
+            const r=await fetch('/api/proyectos/'+encodeURIComponent(id),{credentials:'include'});
+            const p = await r.json();
+            document.getElementById('hidId').value=p._id;
+            document.getElementById('inpNombre').value=p.nombre||'';
+            document.getElementById('inpDesc').value=p.descripcion||'';
+            document.getElementById('selEstado').value=p.estado||'activo';
+            document.getElementById('selCurso').value=p?.curso?._id||'';
+            document.getElementById('modalTitle').textContent='Editar proyecto';
+            modal.show();
+          }catch(err){ showAlert('No se pudo cargar el proyecto'); }
+        }
+      };
+
+      btnNuevo.onclick = async ()=>{
+        mHide();
+        await loadCursosDropdown();
+        document.getElementById('hidId').value='';
+        document.getElementById('inpNombre').value='';
+        document.getElementById('inpDesc').value='';
+        document.getElementById('selEstado').value='activo';
+        document.getElementById('modalTitle').textContent='Nuevo proyecto';
+        modal.show();
+      };
+
+    }catch(e){
+      if(String(e).includes('No autenticado')){ location.href='/login.html'; return; }
+      showAlert('No se pudo cargar Proyectos');
+      console.error(e);
+    }
+  }
+
+  async function loadCursosDropdown(){
+    const sel=document.getElementById('selCurso');
+    sel.innerHTML='<option value="">Cargando…</option>';
+    try{
+      const { cursos } = await fetchCursos();
+      sel.innerHTML='<option value="">Seleccione…</option>' + (cursos||[])
+        .map(c=>`<option value="${c._id}">${c.nombre} (${c.codigo||''})</option>`).join('');
+    }catch{
+      sel.innerHTML='<option value="">No se pudieron cargar cursos</option>';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    modal = new bootstrap.Modal(document.getElementById('modalProyecto'));
+    document.getElementById('formProyecto').addEventListener('submit', async (e)=>{
+      e.preventDefault(); mHide();
+      const payload = {
+        nombre: document.getElementById('inpNombre').value.trim(),
+        id_curso: document.getElementById('selCurso').value,
+        descripcion: document.getElementById('inpDesc').value.trim(),
+        estado: document.getElementById('selEstado').value
+      };
+      if(!payload.nombre || !payload.id_curso){ mShow('Nombre y curso son obligatorios'); return; }
+
+      const id = document.getElementById('hidId').value;
+      try{
+        if(id) await updateProyecto(id, payload); else await createProyecto(payload);
+        modal.hide(); await load();
+      }catch(err){ mShow('No se pudo guardar'); }
+    });
+
+    load();
+  });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+<script src="/js/auth-ui.js"></script>
+  <script>
+    AuthUI?.initHeader?.({ protect: true });
+  </script>
+</body>
+</html>
