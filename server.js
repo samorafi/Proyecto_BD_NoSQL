@@ -22,6 +22,10 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 // ===== Rutas API =====
 const tareasRoutes = require('./routes/tareas.routes');
 const authRoutes = require('./routes/auth.routes');
+const logsRoutes = require('./routes/logs.routes');
+const estadisticasRoutes = require('./routes/estadisticas.routes');
+app.use('/api/estadisticas', estadisticasRoutes);
+app.use('/api/logs', logsRoutes);
 app.use('/api/tareas', tareasRoutes);
 app.use('/api/auth', authRoutes);
 

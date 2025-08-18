@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Listado de Cursos</title>
+  <title>Listado de Logs</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -11,7 +11,7 @@
 
   <!-- Header -->
   <header class="d-flex justify-content-between align-items-center p-3" style="background:#2a73ff; color:white;">
-    <h1 class=" m-0">
+    <h1 class="m-0">
       <a href="#" id="homeLink" class="tituloNav" style="color:white; text-decoration:none;">Gestor Académico</a>
     </h1>
     <div class="d-flex align-items-center gap-2">
@@ -21,14 +21,16 @@
   </header>
 
   <!-- Nav -->
- <nav id="mainNav">
+  <nav id="mainNav">
     <ul class="menu">
       <li><a href="/perfil.html">Perfil</a></li>
       <li><a href="gestion-academica.html">Gestión Académica</a></li>
       <li><a href="/menu-tareas.html">Tareas y Colaboración</a></li>
       <li><a href="estadisticas.html">Estadísticas</a></li>
       <li><a href="logs.html" class="selectedNav">Logs</a></li>
-      <li class="role-only" data-roles="administrador" style="display:none;"><a href="/admin-usuarios.html">Gestión de Usuarios</a>
+      <li class="role-only" data-roles="administrador" style="display:none;">
+        <a href="/admin-usuarios.html">Gestión de Usuarios</a>
+      </li>
     </ul>
   </nav>
 
@@ -47,7 +49,7 @@
             <thead>
               <tr>
                 <th>id</th>
-                <th>Accion</th>
+                <th>Acción</th>
                 <th>Usuario</th>
                 <th style="width:240px">Detalle</th>
                 <th>Fecha</th>
@@ -60,6 +62,42 @@
       </div>
     </div>
   </main>
+
+  <!-- Script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      const tbody = document.getElementById("logs-table");
+
+      try {
+        const res = await fetch("/api/logs");
+        const logs = await res.json();
+
+        tbody.innerHTML = "";
+
+        logs.forEach(log => {
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${log._id}</td>
+            <td>${log.accion}</td>
+            <td>${log.usuario || "N/A"}</td>
+            <td>${log.detalle || ""}</td>
+            <td>${new Date(log.fecha).toLocaleString()}</td>
+            <td>
+              <button class="btn btn-sm btn-danger">Eliminar</button>
+            </td>
+          `;
+
+          tbody.appendChild(tr);
+        });
+      } catch (error) {
+        console.error("Error cargando logs:", error);
+        document.getElementById("alertBox").classList.remove("d-none");
+        document.getElementById("alertBox").textContent = "No se pudieron cargar los logs";
+      }
+    });
+  </script>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/js/auth-ui.js"></script>
   <script> AuthUI?.initHeader?.({ protect:true }); </script>
